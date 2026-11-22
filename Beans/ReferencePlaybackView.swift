@@ -144,6 +144,8 @@ struct ReferencePlaybackView: View {
                 .frame(width: 0, height: 0)
                 .allowsHitTesting(false)
         }
+        // Apple Music / MeloX 播放器始终使用深色状态栏与白色前景
+        .preferredColorScheme(.dark)
         .onAppear {
             page = showLyrics ? 1 : 0
             if page == 1 { scheduleAutoHide() }
