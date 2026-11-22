@@ -33,13 +33,21 @@ struct SongCell: View {
     private var rowContent: some View {
         HStack(spacing: 12) {
             if showCover {
-                CoverImage(url: song.coverURL, size: 46, cornerRadius: 10)
+                CoverImage(
+                    url: song.coverURL,
+                    size: isNativeClean ? 44 : 46,
+                    cornerRadius: isNativeClean ? 6 : 10
+                )
             }
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(song.name)
-                        .font(BeansFont.appFont(15, isCurrent ? .semibold : .regular))
-                        .foregroundStyle(isCurrent ? Color.beansAmber : Color.beansLabel)
+                        .font(isNativeClean
+                              ? .system(size: 17)
+                              : BeansFont.appFont(15, isCurrent ? .semibold : .regular))
+                        .foregroundStyle(isNativeClean
+                                         ? Color.primary
+                                         : (isCurrent ? Color.beansAmber : Color.beansLabel))
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
@@ -54,8 +62,8 @@ struct SongCell: View {
                 }
                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                 Text(song.artists.isEmpty ? song.album : song.artists)
-                    .font(BeansFont.appFont(12))
-                    .foregroundStyle(Color.beansComment)
+                    .font(isNativeClean ? .system(size: 12) : BeansFont.appFont(12))
+                    .foregroundStyle(isNativeClean ? Color.secondary : Color.beansComment)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
@@ -66,14 +74,14 @@ struct SongCell: View {
                 NowPlayingIndicator()
             } else {
                 Text(song.formattedDuration)
-                    .font(BeansFont.appFont(12, .regular, .monospaced))
-                    .foregroundStyle(Color.beansComment)
+                    .font(isNativeClean ? .system(size: 12, design: .monospaced) : BeansFont.appFont(12, .regular, .monospaced))
+                    .foregroundStyle(isNativeClean ? Color.secondary : Color.beansComment)
             }
         }
         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 6)
         .contentShape(Rectangle())
-        .scaleEffect(isCurrent ? 1.012 : 1)
+        .scaleEffect(isCurrent && !isNativeClean ? 1.012 : 1)
         .animation(.spring(response: 0.28, dampingFraction: 0.86), value: isCurrent)
         .onTapGesture {
             onTap?()
@@ -144,11 +152,14 @@ struct SongCell: View {
     var body: some View {
         let _ = theme.accent
         Group {
-        if glassRow || (isNativeClean && !suppressNativeCleanRowGlass) {
+            // Apple Music / MeloX：行直接排在页面背景上，不使用玻璃卡片
+            if isNativeClean {
+                rowContent
+            } else if glassRow {
                 rowContent
                     .padding(.horizontal, 10)
                     .background {
-                                            BeansGlass(shape: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        BeansGlass(shape: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     }
             } else {
                 rowContent

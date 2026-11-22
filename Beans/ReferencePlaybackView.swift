@@ -102,6 +102,7 @@ struct ReferencePlaybackView: View {
     /// 翻译显示（MeloX lyricsTranslationEnabled，默认开启）
     @State private var showTranslations = true
     @State private var autoHideTask: Task<Void, Never>?
+    @State private var lastAutoHideSchedule = Date.distantPast
 
     private func layoutEntry(_ part: AppleMusicLayoutPart) -> PlayerLayoutEntry {
         appleLayout.entry(for: part)
@@ -1001,7 +1002,14 @@ struct ReferencePlaybackView: View {
         guard page == 1 else { return }
         if !chromeVisible {
             withAnimation(interfaceShowAnimation) { chromeVisible = true }
+            scheduleAutoHide()
+            lastAutoHideSchedule = Date()
+            return
         }
+        // 拖动/点击会高频触发，节流避免反复重建隐藏任务
+        let now = Date()
+        guard now.timeIntervalSince(lastAutoHideSchedule) > 0.8 else { return }
+        lastAutoHideSchedule = now
         scheduleAutoHide()
     }
 

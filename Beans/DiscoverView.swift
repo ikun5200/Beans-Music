@@ -503,78 +503,85 @@ struct DiscoverView: View {
         }
     }
 
-    /// MeloX 风格渐变推荐卡
-    private var dailyHeroCard: some View {
-        Button {
+    /// MeloX HomeEditorialCard（standard，非 compact）：
+    /// eyebrow + 标题 + 副标题 + 1.48 比例渐变大图（72pt 图标 + title.bold 白字）
+    private func heroCard(
+        eyebrow: String,
+        title: String,
+        subtitle: String,
+        icon: String,
+        colors: [Color],
+        action: @escaping () -> Void
+    ) -> some View {
+        let cardWidth = min(UIScreen.main.bounds.width * 0.86, 340)
+        return Button {
             BeansHaptics.tap()
-            openRoute(DiscoverRoute.dailySongs(dailySongs))
+            action()
         } label: {
-            ZStack(alignment: .bottomLeading) {
-                RoundedRectangle(cornerRadius: MeloDesign.cardRadius, style: .continuous)
-                    .fill(LinearGradient(
-                        colors: [MeloDesign.accent, Color(red: 0.78, green: 0.06, blue: 0.16)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-                    .frame(width: 300, height: 178)
-                Image(systemName: "calendar.badge.clock")
-                    .font(.system(size: 62, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.20))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                    .padding(20)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("每日推荐")
-                        .font(.system(size: 24, weight: .bold))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(eyebrow.uppercased())
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+
+                Text(title)
+                    .font(.system(size: 20))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+
+                Text(subtitle)
+                    .font(.system(size: 15))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                ZStack(alignment: .bottomLeading) {
+                    LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+
+                    Image(systemName: icon)
+                        .font(.system(size: 72, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.24))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                    Text(title)
+                        .font(.system(size: 28, weight: .bold))
                         .foregroundStyle(.white)
-                    Text("为你定制的歌曲")
-                        .font(.system(size: 12.5, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.78))
+                        .padding(18)
                 }
-                .padding(20)
+                .aspectRatio(1.48, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .padding(.top, 8)
             }
-            .frame(width: 300, height: 178)
-            .clipShape(RoundedRectangle(cornerRadius: MeloDesign.cardRadius, style: .continuous))
-            .shadow(color: .black.opacity(0.12), radius: 14, y: 8)
+            .frame(width: cardWidth, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(GlassPressButtonStyle(scale: 0.985))
     }
 
-    /// MeloX 首页第二张渐变卡：热门歌单
+    /// MeloX 快捷卡：每日推荐
+    private var dailyHeroCard: some View {
+        heroCard(
+            eyebrow: "为你定制",
+            title: "每日推荐",
+            subtitle: dailyRecommendationSubtitle,
+            icon: "calendar",
+            colors: [.pink, .red]
+        ) {
+            openRoute(DiscoverRoute.dailySongs(dailySongs))
+        }
+    }
+
+    /// MeloX 快捷卡：热门歌单
     private var playlistsHeroCard: some View {
-        Button {
-            BeansHaptics.tap()
+        heroCard(
+            eyebrow: "热门精选",
+            title: "热门歌单",
+            subtitle: "发现最近大家都在听",
+            icon: "square.stack",
+            colors: [.indigo, .purple]
+        ) {
             if let first = personalized.first {
                 openRoute(DiscoverRoute.playlist(first))
             }
-        } label: {
-            ZStack(alignment: .bottomLeading) {
-                RoundedRectangle(cornerRadius: MeloDesign.cardRadius, style: .continuous)
-                    .fill(LinearGradient(
-                        colors: [Color(red: 0.55, green: 0.32, blue: 0.92), Color(red: 0.32, green: 0.16, blue: 0.62)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-                    .frame(width: 300, height: 178)
-                Image(systemName: "square.stack")
-                    .font(.system(size: 62, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.20))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                    .padding(20)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("热门歌单")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(.white)
-                    Text("发现最近大家都在听")
-                        .font(.system(size: 12.5, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.78))
-                }
-                .padding(20)
-            }
-            .frame(width: 300, height: 178)
-            .clipShape(RoundedRectangle(cornerRadius: MeloDesign.cardRadius, style: .continuous))
-            .shadow(color: .black.opacity(0.12), radius: 14, y: 8)
         }
-        .buttonStyle(GlassPressButtonStyle(scale: 0.985))
     }
 
     private var dailySongCards: some View {
