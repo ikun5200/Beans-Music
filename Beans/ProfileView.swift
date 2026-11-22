@@ -1001,7 +1001,7 @@ struct SettingsView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(networkQuality.availablePlaybackQualities) { quality in
-                        let selected = selection.wrappedValue == quality
+                        let selected = selection.wrappedValue.rawValue == quality.rawValue
                         Button {
                             selection.wrappedValue = quality
                             BeansHaptics.select()

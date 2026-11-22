@@ -2277,7 +2277,7 @@ struct PlayerView: View {
                     player.reloadForQualityChange()
                     BeansHaptics.select()
                 } label: {
-                    if quality == networkQuality.resolvedQuality {
+                    if quality.rawValue == networkQuality.resolvedQuality.rawValue {
                         Label(quality.displayName, systemImage: "checkmark")
                     } else {
                         Text(quality.displayName)
