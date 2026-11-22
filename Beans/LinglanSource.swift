@@ -142,7 +142,14 @@ final class LinglanSource: ObservableObject {
             }
             let urlString = (json["url"] as? String)
                 ?? ((json["data"] as? [String: Any])?["url"] as? String)
-            guard let urlString, !urlString.isEmpty, let playURL = URL(string: urlString) else { return nil }
+            guard let urlString, !urlString.isEmpty,
+                  let playURL = URL(string: urlString),
+                  playURL.path.count > 1,
+                  !playURL.lastPathComponent.isEmpty else {
+                // 无效歌曲时后端可能只返回 CDN 域名（无实际文件路径），视为未命中。
+                BeansLogger.shared.log("聆澜音源返回无效地址：songID=\(songID) url=\(urlString)", level: .debug)
+                return nil
+            }
             BeansLogger.shared.log("聆澜音源命中：songID=\(songID) 音质=\(quality)", level: .info)
             return playURL
         } catch {
