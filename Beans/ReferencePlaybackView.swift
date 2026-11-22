@@ -10,6 +10,15 @@ private struct ReferenceLyricCenterKey: PreferenceKey {
     }
 }
 
+private struct ReferenceArtworkFrameKey: PreferenceKey {
+    static var defaultValue: CGRect = .zero
+
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        let next = nextValue()
+        if next.width > 0, next.height > 0 { value = next }
+    }
+}
+
 /// MeloX `NowPlayingMotionSpec.appleMusic26` 的等价参数。
 private enum ReferencePlaybackMetrics {
     /// 播放页左右安全边距（MeloX portraitHorizontalPadding = 32）
@@ -85,6 +94,9 @@ struct ReferencePlaybackView: View {
     @State private var isDraggingLyrics = false
     @State private var resumeTask: Task<Void, Never>?
     @State private var artworkBounceScale: CGFloat = 1
+    /// 封面页大封面在页面坐标系中的位置（用于跨页封面变形动画）
+    @State private var artworkPageFrame: CGRect = .zero
+    @State private var isPageTransitioning = false
     /// 歌词页界面显隐（MeloX showsLyricsControls）
     @State private var chromeVisible = true
     /// 翻译显示（MeloX lyricsTranslationEnabled，默认开启）
@@ -226,6 +238,13 @@ struct ReferencePlaybackView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipped()
                     .transition(artworkPageTransition)
+            } else {
+                // 常驻隐藏测量：保证从歌词/队列返回封面页时封面能从 72pt 平滑放大（MeloX 同款）
+                artworkPage(size: size, pageHeight: pageHeight)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .opacity(0)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
             }
 
             // 歌词页与队列页常驻，保证交叉淡入淡出与状态延续（MeloX resident 页面）
@@ -249,8 +268,73 @@ struct ReferencePlaybackView: View {
                     .frame(height: ReferencePlaybackMetrics.songHeaderHeight, alignment: .center)
                     .transition(songHeaderTransition)
             }
+
+            // 跨页共用的封面图层：封面页 ↔ 72pt 歌曲头（MeloX portrait artwork overlay）
+            artworkOverlay
+                .allowsHitTesting(false)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .coordinateSpace(name: "referencePlayerPages")
+        .onPreferenceChange(ReferenceArtworkFrameKey.self) { frame in
+            guard !isPageTransitioning, frame.width > 1, frame.height > 1 else { return }
+            if abs(frame.midX - artworkPageFrame.midX) > 0.5
+                || abs(frame.midY - artworkPageFrame.midY) > 0.5
+                || abs(frame.width - artworkPageFrame.width) > 0.5 {
+                artworkPageFrame = frame
+            }
+        }
+    }
+
+    // MARK: - 跨页封面（MeloX artworkResize：0.48s smooth）
+
+    private var headerArtworkFrame: CGRect {
+        CGRect(
+            x: ReferencePlaybackMetrics.horizontal,
+            y: 0,
+            width: ReferencePlaybackMetrics.songHeaderHeight,
+            height: ReferencePlaybackMetrics.songHeaderHeight
+        )
+    }
+
+    private var artworkTargetFrame: CGRect {
+        if page == 0, artworkPageFrame.width > 1 {
+            return artworkPageFrame
+        }
+        return headerArtworkFrame
+    }
+
+    @ViewBuilder
+    private var artworkOverlay: some View {
+        let frame = artworkTargetFrame
+        let isOnArtworkPage = page == 0
+
+        if frame.width > 1, artworkPageFrame.width > 1 || !isOnArtworkPage {
+            RefPlaybackArtwork(url: song?.coverURL, cornerRadius: 12)
+                .frame(width: max(1, frame.width), height: max(1, frame.height))
+                .shadow(
+                    color: .black.opacity(isOnArtworkPage ? (player.isPlaying ? 0.34 : 0.18) : 0.20),
+                    radius: isOnArtworkPage ? (player.isPlaying ? 26 : 14) : 10,
+                    y: isOnArtworkPage ? (player.isPlaying ? 15 : 8) : 5
+                )
+                .scaleEffect(
+                    isOnArtworkPage
+                        ? (player.isPlaying ? 1 : 0.74) * artworkBounceScale
+                        : 1
+                )
+                .position(x: frame.midX, y: frame.midY)
+                .modifier(
+                    AppleMusicLayoutTransform(
+                        entry: isOnArtworkPage
+                            ? layoutEntry(.cover)
+                            : PlayerLayoutEntry()
+                    )
+                )
+                .animation(
+                    reduceMotion ? nil : Animation.meloSmooth(0.48),
+                    value: frame
+                )
+                .animation(artworkExpansionAnimation, value: player.isPlaying)
+        }
     }
 
     // MARK: - 页面切换动画（MeloX NowPlayingPageTransition）
@@ -310,6 +394,13 @@ struct ReferencePlaybackView: View {
         withAnimation(animation) {
             page = target
         }
+        // 过渡期间不接收封面测量值（避免把 -300 的临时位移记录为最终位置）
+        isPageTransitioning = true
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 550_000_000)
+            guard !Task.isCancelled else { return }
+            isPageTransitioning = false
+        }
         if syncBinding {
             showLyrics = (target == 1)
         }
@@ -336,22 +427,29 @@ struct ReferencePlaybackView: View {
         return VStack(spacing: 0) {
             Spacer(minLength: 8)
 
-            CoverImage(
-                url: song?.coverURL,
-                size: artworkSize,
-                cornerRadius: 12,
-                emptyHint: player.isBuffering ? "等待开始播放…" : nil
-            )
-            .frame(width: artworkSize, height: artworkSize)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .scaleEffect((player.isPlaying ? 1 : 0.74) * artworkBounceScale)
-            .shadow(
-                color: .black.opacity(player.isPlaying ? 0.34 : 0.18),
-                radius: player.isPlaying ? 26 : 14,
-                y: player.isPlaying ? 15 : 8
-            )
-            .animation(artworkExpansionAnimation, value: player.isPlaying)
-            .modifier(AppleMusicLayoutTransform(entry: layoutEntry(.cover)))
+            // 封面由跨页 overlay 绘制（MeloX portrait artwork），这里只负责占位与测量
+            Color.clear
+                .frame(width: artworkSize, height: artworkSize)
+                .background {
+                    GeometryReader { geo in
+                        Color.clear.preference(
+                            key: ReferenceArtworkFrameKey.self,
+                            value: geo.frame(in: .named("referencePlayerPages"))
+                        )
+                    }
+                }
+                .overlay {
+                    // 首次测量完成前用同尺寸封面占位，避免一帧空白
+                    if artworkPageFrame.width <= 1 {
+                        CoverImage(
+                            url: song?.coverURL,
+                            size: artworkSize,
+                            cornerRadius: 12,
+                            emptyHint: player.isBuffering ? "等待开始播放…" : nil
+                        )
+                    }
+                }
+                .modifier(AppleMusicLayoutTransform(entry: layoutEntry(.cover)))
 
             Spacer(minLength: 22)
 
@@ -397,7 +495,8 @@ struct ReferencePlaybackView: View {
 
     private var songHeader: some View {
         HStack(spacing: 12) {
-            CoverImage(url: song?.coverURL, size: ReferencePlaybackMetrics.songHeaderHeight, cornerRadius: 12)
+            // 封面由跨页 overlay 绘制
+            Color.clear
                 .frame(
                     width: ReferencePlaybackMetrics.songHeaderHeight,
                     height: ReferencePlaybackMetrics.songHeaderHeight
@@ -556,8 +655,9 @@ struct ReferencePlaybackView: View {
 
     private func lyricRow(_ line: LyricLine, isFocused: Bool) -> some View {
         let distance = lyricDistance(for: line)
-        let textOpacity = isFocused ? 1.0 : (distance <= 1 ? 0.34 : 0.20)
-        let blurRadius: CGFloat = isFocused ? 0 : (distance <= 1 ? 1.8 : 2.8)
+        // MeloX AppleMusicLyricsMotionProfile：非焦点行 0.175 透明度、3pt 模糊、0.98 缩放
+        let textOpacity = isFocused ? 1.0 : (distance <= 1 ? 0.28 : 0.175)
+        let blurRadius: CGFloat = isFocused ? 0 : (distance <= 1 ? 2.4 : 3.2)
 
         return Button {
             BeansHaptics.tap()
@@ -585,7 +685,7 @@ struct ReferencePlaybackView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
-            .scaleEffect(isFocused ? 1.02 : 1.0, anchor: .leading)
+            .scaleEffect(isFocused ? 1.02 : 0.98, anchor: .leading)
         }
         .buttonStyle(.plain)
         .animation(lyricFocusAnimation, value: isFocused)
@@ -1277,5 +1377,52 @@ private struct ReferenceSystemVolumeView: UIViewRepresentable {
     func updateUIView(_ uiView: ReferenceAlignedVolumeView, context: Context) {
         uiView.showsVolumeSlider = true
         uiView.tintColor = .white
+    }
+}
+
+// MARK: - 跨页封面视图（MeloX ArtworkImage 的等价实现，可自由缩放）
+
+private struct RefPlaybackArtwork: View {
+    let url: URL?
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(Color.beansGlassFill)
+            .overlay {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure:
+                        placeholder
+                    case .empty:
+                        if url == nil {
+                            placeholder
+                        } else {
+                            ZStack {
+                                placeholder
+                                ProgressView()
+                                    .tint(.white.opacity(0.75))
+                            }
+                        }
+                    @unknown default:
+                        placeholder
+                    }
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+
+    private var placeholder: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(Color.beansGlassFill)
+            Image(systemName: "waveform")
+                .font(.system(size: 22, weight: .medium))
+                .foregroundStyle(.white.opacity(0.45))
+        }
     }
 }
