@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 private enum LibraryRoute: Hashable {
     case playlist(Playlist)
@@ -13,6 +14,8 @@ struct LibraryView: View {
     @State private var showHistory = false
     @State private var showSectionSort = false
     @State private var showSyncedPlaylistSort = false
+    /// MeloX 风格分段：本地音乐库 / 我的歌单 / 最近播放
+    @State private var librarySegmentIndex = 0
     /// 音乐库板块顺序（本地音乐库 / 我的歌单 / 最近播放，可自定义）
     @State private var libraryOrder = SectionOrderStore.load(SectionOrderStore.libraryKey, defaults: SectionOrderStore.libraryDefaults)
     @State private var navigationPath: [LibraryRoute] = []
@@ -77,17 +80,29 @@ struct LibraryView: View {
                     } else {
                         header
                     }
-                    // 板块按用户自定义顺序渲染（可拖拽排序）
-                    ForEach(libraryOrder, id: \.self) { key in
-                        switch key {
-                        case "本地音乐库":
-                            LocalMusicSection()
-                        case "我的歌单":
-                            qqSection
-                        case "最近播放":
-                            historySection
-                        default:
-                            EmptyView()
+                    if isNativeClean {
+                        // MeloX 风格：分段控件切换内容
+                        VStack(alignment: .leading, spacing: 18) {
+                            librarySegmentedControl
+                            switch librarySegmentIndex {
+                            case 0: LocalMusicSection()
+                            case 1: qqSection
+                            default: historySection
+                            }
+                        }
+                    } else {
+                        // 自定义板块顺序（可拖拽排序）
+                        ForEach(libraryOrder, id: \.self) { key in
+                            switch key {
+                            case "本地音乐库":
+                                LocalMusicSection()
+                            case "我的歌单":
+                                qqSection
+                            case "最近播放":
+                                historySection
+                            default:
+                                EmptyView()
+                            }
                         }
                     }
                 }
@@ -162,6 +177,36 @@ struct LibraryView: View {
         } else {
             legacyRoute = route
         }
+    }
+
+    /// MeloX 风格分段控件（灰底胶囊 + 白色选中胶囊）
+    private var librarySegmentedControl: some View {
+        let segments = ["歌曲", "歌单", "最近播放"]
+        return HStack(spacing: 0) {
+            ForEach(Array(segments.enumerated()), id: \.offset) { index, title in
+                Button {
+                    BeansHaptics.select()
+                    withAnimation(.beansSnappy) { librarySegmentIndex = index }
+                } label: {
+                    Text(title)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(librarySegmentIndex == index ? Color.primary : Color.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background {
+                            if librarySegmentIndex == index {
+                                Capsule(style: .continuous)
+                                    .fill(Color(UIColor.systemBackground))
+                                    .shadow(color: .black.opacity(0.08), radius: 4, y: 1)
+                            }
+                        }
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(3)
+        .background(Capsule(style: .continuous).fill(Color.primary.opacity(0.06)))
     }
 
     private var header: some View {

@@ -212,7 +212,9 @@ struct BeansGlass<S: Shape>: View {
                     .fill(Color.beansGlassFill.opacity(0.74))
             case .nativeClean:
                 shape
-                    .fill(Color.beansGlassFill.opacity(0.62))
+                    .fill(controlSurface
+                          ? Color.beansGlassFill.opacity(0.70)
+                          : Color.primary.opacity(0.028))
             }
         }
     }

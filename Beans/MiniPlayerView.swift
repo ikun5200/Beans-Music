@@ -17,12 +17,11 @@ struct MiniPlayerView: View {
     @State private var miniLyrics: [LyricLine] = []
     @AppStorage("beans.lyricOffset") private var lyricOffset = 0.0
     @AppStorage("beans.uiStyle") private var uiStyleRaw = BeansUIStyle.liquid.rawValue
-    @AppStorage("beans.showSongVIPBadge") private var showSongVIPBadge = true
 
-    private var coverSize: CGFloat { 36 }
-    private var controlSize: CGFloat { 32 }
-    private var containerRadius: CGFloat { 18 }
-    private var verticalPadding: CGFloat { 4 }
+    private var coverSize: CGFloat { 44 }
+    private var controlSize: CGFloat { 34 }
+    private var containerRadius: CGFloat { 24 }
+    private var verticalPadding: CGFloat { 7 }
 
     /// 二分查找当前播放到的歌词行（歌词按时间升序）
     private var currentLyricLine: LyricLine? {
@@ -42,6 +41,11 @@ struct MiniPlayerView: View {
         return answer
     }
 
+    private var progressFraction: CGFloat {
+        guard player.duration > 0 else { return 0 }
+        return CGFloat(min(max(clock.progress / player.duration, 0), 1))
+    }
+
     var body: some View {
         let _ = theme.accent
         Button {
@@ -49,112 +53,85 @@ struct MiniPlayerView: View {
             showPlayer = true
         } label: {
             HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(theme.accent.highlight.opacity(0.32))
-                        .frame(width: 42, height: 42)
-                        .blur(radius: 9)
-                    CoverImage(url: player.currentSong?.coverURL, size: coverSize, cornerRadius: 7)
-                }
-                .frame(width: 42, height: 42)
+                CoverImage(url: player.currentSong?.coverURL, size: coverSize, cornerRadius: 8)
+                    .frame(width: coverSize, height: coverSize)
+                    .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
+
                 VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 5) {
-                        Text(player.currentSong?.name ?? "")
-                            .font(BeansFont.appFont(12, .semibold))
-                            .foregroundStyle(Color.beansLabel)
-                            .lineLimit(1)
-                        if showSongVIPBadge, player.currentSong?.isVIP == true {
-                            Text("VIP")
-                                .font(BeansFont.appFont(8, .bold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1.5)
-                                .background(Capsule().fill(Color(red: 0.93, green: 0.25, blue: 0.22)))
-                        }
-                    }
+                    Text(player.currentSong?.name ?? "未在播放")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.primary)
+                        .lineLimit(1)
                     Text(currentLyricLine?.text ?? player.currentSong?.artists ?? "")
-                        .font(BeansFont.appFont(10))
-                        .foregroundStyle(Color.beansComment)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Color.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .animation(.beansSmooth, value: currentLyricLine?.text)
                 }
                 Spacer(minLength: 8)
-                Button {
-                    BeansHaptics.tap()
-                    player.previous()
-                } label: {
-                    Image(systemName: "backward.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.beansLabel)
-                        .frame(width: controlSize, height: controlSize)
-                        .contentShape(Circle())
-                }
-                .buttonStyle(GlassPressButtonStyle())
+
                 Button {
                     BeansHaptics.tap()
                     player.togglePlayPause()
                 } label: {
-                    PlayPauseMorphIcon(isPlaying: player.isPlaying, size: 16)
-                        .foregroundStyle(Color.beansLabel)
+                    PlayPauseMorphIcon(isPlaying: player.isPlaying, size: 19)
+                        .foregroundStyle(Color.primary)
                         .frame(width: controlSize, height: controlSize)
                         .contentShape(Circle())
                 }
                 .buttonStyle(GlassPressButtonStyle())
+
                 Button {
                     BeansHaptics.tap()
                     player.next()
                 } label: {
                     Image(systemName: "forward.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.beansLabel)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color.primary)
                         .frame(width: controlSize, height: controlSize)
                         .contentShape(Circle())
                 }
                 .buttonStyle(GlassPressButtonStyle())
             }
-            .padding(.leading, 10)
-            .padding(.trailing, 6)
+            .padding(.leading, 9)
+            .padding(.trailing, 10)
             .padding(.vertical, verticalPadding)
             .background {
                 if presentation.showsCardSurface {
-                    // 普通底部浮层：保留卡片质感与阴影。
                     BeansGlass(
                         shape: RoundedRectangle(cornerRadius: containerRadius, style: .continuous),
-                        forceLiquid: false,
                         controlSurface: true,
                         interactive: true
                     )
-                    .overlay {
-                        LinearGradient(
-                            colors: [.white.opacity(0.25), .clear, .white.opacity(0.05)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        )
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: containerRadius, style: .continuous)
-                            .strokeBorder(
-                                LinearGradient(
-                                    colors: [.white.opacity(0.45), .white.opacity(0.08)],
-                                    startPoint: .top, endPoint: .bottom
-                                ),
-                                lineWidth: 0.8
-                            )
+                    .overlay(alignment: .bottom) {
+                        // MeloX 风格：胶囊底部细进度线
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Color.primary.opacity(0.08))
+                                Capsule()
+                                    .fill(MeloDesign.accent)
+                                    .frame(width: max(0, geo.size.width * progressFraction))
+                            }
+                        }
+                        .frame(height: 2.5)
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 4)
+                        .allowsHitTesting(false)
                     }
                 } else {
-                    // 进入底栏 accessory 时不再叠一层卡片，交给系统/底栏容器去承载。
                     RoundedRectangle(cornerRadius: containerRadius, style: .continuous)
                         .fill(.clear)
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: containerRadius, style: .continuous))
-            .shadow(color: presentation.showsCardSurface ? .black.opacity(0.16) : .clear, radius: 12, y: 6)
+            .shadow(color: presentation.showsCardSurface ? .black.opacity(0.10) : .clear, radius: 14, y: 6)
             .scaleEffect(showPlayer ? 0.985 : 1)
-            .animation(.spring(response: 0.34, dampingFraction: 0.86), value: showPlayer)
+            .animation(.beansSnappy, value: showPlayer)
         }
-        .buttonStyle(GlassPressButtonStyle(scale: 0.97))
+        .buttonStyle(GlassPressButtonStyle(scale: 0.98))
         .transitionSource(in: transitionNamespace)
-        .padding(.horizontal, presentation.showsCardSurface ? 12 : 0)
+        .padding(.horizontal, presentation.showsCardSurface ? 14 : 0)
         .task(id: player.currentSong?.identityKey) {
             await loadMiniLyrics()
         }

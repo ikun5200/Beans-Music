@@ -270,7 +270,7 @@ struct DiscoverView: View {
         let custom = homeGreetingText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !custom.isEmpty { return custom }
         let hour = Calendar.current.component(.hour, from: Date())
-        if isNativeClean { return "推荐" }
+        if isNativeClean { return "主页" }
         switch hour {
         case 5..<12: return "早上好"
         case 12..<18: return "下午好"
@@ -569,7 +569,7 @@ struct DiscoverView: View {
         Button(action: action) {
             ZStack(alignment: .bottomLeading) {
                 if let coverURL {
-                    CoverImage(url: coverURL, size: isNativeClean ? 184 : 168, cornerRadius: isNativeClean ? 16 : 18)
+                    CoverImage(url: coverURL, size: isNativeClean ? 184 : 168, cornerRadius: isNativeClean ? 20 : 18)
                         .overlay {
                             LinearGradient(
                                 colors: [.black.opacity(0.05), .black.opacity(0.62)],

@@ -494,7 +494,7 @@ private struct KumoneGlassTabBar: View {
 
     private let innerInset: CGFloat = 4
     private let contentHeight: CGFloat = 56
-    private let settle = Animation.spring(response: 0.35, dampingFraction: 0.82)
+    private let settle = Animation.beansSnappy
 
     var body: some View {
         GeometryReader { geo in
@@ -523,7 +523,7 @@ private struct KumoneGlassTabBar: View {
         }
         .frame(height: contentHeight)
         .padding(innerInset)
-        .background { Capsule().fill(.regularMaterial) }
+        .background { BeansGlass(shape: Capsule(), controlSurface: true) }
         .overlay {
             Capsule()
                 .strokeBorder(.white.opacity(colorScheme == .dark ? 0.08 : 0.20), lineWidth: 0.5)
@@ -554,9 +554,8 @@ private struct KumoneGlassTabBar: View {
 
     private var selectionPill: some View {
         Capsule(style: .continuous)
-            .fill(colorScheme == .dark
-                  ? Color.white.opacity(0.10)
-                  : Color.black.opacity(0.075))
+            .fill(colorScheme == .dark ? Color.white.opacity(0.12) : Color.white)
+            .shadow(color: .black.opacity(colorScheme == .dark ? 0.0 : 0.08), radius: 6, y: 2)
     }
 
     private func index(for x: CGFloat, cellW: CGFloat, count: Int) -> Int {

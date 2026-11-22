@@ -659,10 +659,24 @@ private struct ReferenceScrubber: View {
             }
             .frame(height: 30)
 
-            HStack {
-                Text(beansTimeString(scrubbing ? scrubValue : clock.progress))
-                Spacer()
-                Text(beansTimeString(max(clock.duration, player.currentSong?.duration ?? 0)))
+            // MeloX 风格：左已播放、中音质徽章、右剩余时间
+            let total = max(clock.duration, player.currentSong?.duration ?? 0)
+            let elapsed = scrubbing ? scrubValue : clock.progress
+            HStack(spacing: 8) {
+                Text(beansTimeString(elapsed))
+                Spacer(minLength: 4)
+                HStack(spacing: 4) {
+                    Image(systemName: "waveform")
+                        .font(.system(size: 9, weight: .semibold))
+                    Text(NetworkQualityStore.shared.resolvedQuality.displayName)
+                }
+                .font(BeansFont.appFont(10, .semibold))
+                .foregroundStyle(.white.opacity(0.74))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(.white.opacity(0.14), in: Capsule())
+                Spacer(minLength: 4)
+                Text("-" + beansTimeString(max(total - elapsed, 0)))
             }
             .font(BeansFont.appFont(11, .regular, .monospaced))
             .foregroundStyle(.white.opacity(0.52))

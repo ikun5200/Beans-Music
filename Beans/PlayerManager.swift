@@ -451,6 +451,13 @@ final class PlayerManager: NSObject, ObservableObject {
 
     // MARK: - 播放
 
+    /// 手动切换音质后重新解析当前歌曲（保留播放进度）。
+    func reloadForQualityChange() {
+        guard currentSong != nil else { return }
+        let resume = progress
+        loadCurrent(resumeAt: resume)
+    }
+
     private func restartCurrent() {
         guard ensurePlaybackAllowed() else { return }
         seek(to: 0)

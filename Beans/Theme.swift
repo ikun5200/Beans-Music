@@ -12,8 +12,8 @@ extension UIColor {
     }
 
     static let beansBackground = beansDynamic(
-        light: UIColor(red: 0.949, green: 0.949, blue: 0.961, alpha: 1),  // #F2F2F7
-        dark: UIColor(red: 0.039, green: 0.039, blue: 0.047, alpha: 1)    // #0A0A0C
+        light: UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1),        // MeloX 纯白
+        dark: UIColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 1)          // MeloX 纯黑
     )
     static let beansCard = beansDynamic(
         light: UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1),
@@ -128,6 +128,7 @@ enum BeansWallpaperAppearance: String, CaseIterable, Identifiable {
 // MARK: - 配色主题（多套配色，可在「我的 → 外观」中切换；全局统一生效）
 
 enum BeansAccent: String, CaseIterable, Identifiable {
+    case meloRed = "烈焰红"
     case amber = "琥珀暖金"
     case mint = "青碧湖绿"
     case pink = "樱粉"
@@ -143,6 +144,8 @@ enum BeansAccent: String, CaseIterable, Identifiable {
     /// 渐变强调色（播放键 / 进度条 / 玻璃光晕）
     var gradientColors: [Color] {
         switch self {
+        case .meloRed:
+            return [Color(red: 0.98, green: 0.18, blue: 0.28), Color(red: 0.86, green: 0.10, blue: 0.20)]
         case .amber:
             return [Color(red: 0.949, green: 0.639, blue: 0.235), Color(red: 0.753, green: 0.478, blue: 0.039)]
         case .mint:
@@ -172,6 +175,7 @@ enum BeansAccent: String, CaseIterable, Identifiable {
     /// 常规着色（图标 / 文字）浅色模式版本：深色调保证浅色背景对比度
     var tintLight: UIColor {
         switch self {
+        case .meloRed: return UIColor(red: 0.90, green: 0.13, blue: 0.22, alpha: 1)  // Melo 红
         case .amber: return UIColor(red: 0.72, green: 0.44, blue: 0.03, alpha: 1)   // 深琥珀
         case .mint: return UIColor(red: 0.15, green: 0.53, blue: 0.39, alpha: 1)    // 深湖绿
         case .pink: return UIColor(red: 0.78, green: 0.33, blue: 0.53, alpha: 1)    // 深樱粉
@@ -187,6 +191,7 @@ enum BeansAccent: String, CaseIterable, Identifiable {
     /// 常规着色（图标 / 文字）深色模式版本：亮色调保证深色背景对比度
     var tintDark: UIColor {
         switch self {
+        case .meloRed: return UIColor(red: 0.98, green: 0.30, blue: 0.36, alpha: 1)
         case .amber: return UIColor(red: 0.96, green: 0.70, blue: 0.35, alpha: 1)
         case .mint: return UIColor(red: 0.45, green: 0.80, blue: 0.64, alpha: 1)
         case .pink: return UIColor(red: 0.97, green: 0.60, blue: 0.74, alpha: 1)
@@ -346,7 +351,7 @@ final class ThemeStore: ObservableObject {
     private var wallpapersRestored = false
 
     private init() {
-        accent = BeansAccent(rawValue: UserDefaults.standard.string(forKey: AccentTheme.key) ?? "") ?? .amber
+        accent = BeansAccent(rawValue: UserDefaults.standard.string(forKey: AccentTheme.key) ?? "") ?? .meloRed
         let savedAccent = UserDefaults.standard.string(forKey: customAccentKey)
         customAccentHex = (savedAccent?.isEmpty ?? true) ? nil : savedAccent
         let legacyBackground = UserDefaults.standard.string(forKey: backgroundKey) ?? ""
