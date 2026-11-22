@@ -25,11 +25,17 @@ final class LinglanSource: ObservableObject {
     private static let userAgent = "CeruMusic-Plugin/9.0.1"
 
     @Published var apiKey: String {
-        didSet { UserDefaults.standard.set(apiKey, forKey: Self.apiKeyKey) }
+        didSet {
+            UserDefaults.standard.set(apiKey, forKey: Self.apiKeyKey)
+            scheduleKeyProbe()
+        }
     }
 
     @Published var enabled: Bool {
-        didSet { UserDefaults.standard.set(enabled, forKey: Self.enabledKey) }
+        didSet {
+            UserDefaults.standard.set(enabled, forKey: Self.enabledKey)
+            scheduleKeyProbe()
+        }
     }
 
     @Published private(set) var status: Status = .idle
@@ -38,6 +44,8 @@ final class LinglanSource: ObservableObject {
 
     /// 429/401 冷却，避免反复请求加重限流。
     private var cooldownUntil: Date?
+    /// 输入 Key 后的自动识别任务（防抖，避免逐字请求）。
+    private var probeTask: Task<Void, Never>?
 
     private let session: URLSession = {
         let config = URLSessionConfiguration.default
@@ -71,6 +79,37 @@ final class LinglanSource: ObservableObject {
         let trimmed = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count > 10 else { return trimmed }
         return String(trimmed.prefix(8)) + "…" + String(trimmed.suffix(4))
+    }
+
+    /// 当前 Key 识别到的 QQ 可用音质（低 → 高）。
+    var supportedQualities: [ThirdPartyAudioQuality] {
+        platformQualities.compactMap { ThirdPartyAudioQuality(sourceValue: $0) }
+    }
+
+    /// 按 Key 支持的档位降级；未配置或尚未识别时原样返回。
+    func downgrade(_ quality: ThirdPartyAudioQuality) -> ThirdPartyAudioQuality {
+        guard isConfigured, !platformQualities.isEmpty else { return quality }
+        let supported = Set(platformQualities)
+        for candidate in quality.fallbackChain where supported.contains(candidate.rawValue) {
+            return candidate
+        }
+        return ThirdPartyAudioQuality(sourceValue: platformQualities.first ?? "320k") ?? .kb320
+    }
+
+    /// Key/开关变化后自动识别支持的音质（1.2 秒防抖）。
+    private func scheduleKeyProbe() {
+        probeTask?.cancel()
+        guard enabled, !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            platformQualities = []
+            status = enabled ? .notConfigured : .disabled
+            return
+        }
+        status = .testing
+        probeTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            guard !Task.isCancelled else { return }
+            await self?.testConnection()
+        }
     }
 
     // MARK: - 播放解析
@@ -172,16 +211,28 @@ final class LinglanSource: ObservableObject {
         async let infoJSON = requestJSON(path: "plugin/info")
         let (sources, info) = await (sourcesJSON, infoJSON)
 
+        var freeLimited = false
         if let sources {
             let data = sources["data"] as? [String: Any]
             let sourceMap = data?["sources"] as? [String: Any]
-            if let tx = sourceMap?["tx"] as? [String] {
+            let freeLimit = data?["freeQualityLimit"] as? [String] ?? []
+            if let tx = sourceMap?["tx"] as? [String], !tx.isEmpty {
                 platformQualities = tx
+                // 当 tx 列表与免费档位完全一致时，视为免费额度 Key。
+                freeLimited = !freeLimit.isEmpty && Set(tx) == Set(freeLimit)
+            } else if !freeLimit.isEmpty {
+                // 免费 Key 未列出 tx 时，按免费档位上限处理。
+                platformQualities = freeLimit
+                freeLimited = true
             }
         }
 
         guard sources != nil || info != nil else {
             status = .failed("无法连接聆澜服务，请检查网络或 API Key")
+            return
+        }
+        if platformQualities.isEmpty {
+            status = .failed("当前 Key 不支持 QQ 音乐音源")
             return
         }
 
@@ -199,6 +250,7 @@ final class LinglanSource: ObservableObject {
             }
         }
         status = .online(platforms: platformCount, qualities: platformQualities)
+        _ = freeLimited
         BeansLogger.shared.log(
             "聆澜音源连接成功：平台=\(platformCount) QQ音质=\(platformQualities.joined(separator: "/"))",
             level: .info

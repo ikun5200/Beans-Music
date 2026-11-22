@@ -8,6 +8,7 @@ struct PlayerView: View {
     @EnvironmentObject private var clock: PlaybackClock
     @EnvironmentObject private var favorites: FavoritesStore
     @ObservedObject private var localLibrary = LocalLibraryStore.shared
+    @ObservedObject private var networkQuality = NetworkQualityStore.shared
     @Environment(\.colorScheme) private var colorScheme
     @Binding var isPresented: Bool
 
@@ -1027,6 +1028,8 @@ struct PlayerView: View {
             .buttonStyle(.plain)
 
             Menu {
+                qualityMenu
+                Divider()
                 Button("定时关闭") { showSleepTimer = true }
                 Button("添加到本地歌单") { showAddToLocalPlaylist = true }
                 if downloadFeatureUnlocked {
@@ -1219,6 +1222,8 @@ struct PlayerView: View {
             .buttonStyle(.plain)
 
             Menu {
+                qualityMenu
+                Divider()
                 Button("定时关闭") { showSleepTimer = true }
                 Button("添加到本地歌单") { showAddToLocalPlaylist = true }
                 if downloadFeatureUnlocked {
@@ -2260,6 +2265,37 @@ struct PlayerView: View {
                 .buttonStyle(.plain)
                 .modifier(Layoutable(part: .next, enabled: layoutMode, data: $layoutData))
             }
+        }
+    }
+
+    /// 播放页手动音质菜单：只对本次运行有效，重启恢复设置的默认音质。
+    private var qualityMenu: some View {
+        Menu {
+            ForEach(networkQuality.availablePlaybackQualities) { quality in
+                Button {
+                    networkQuality.setManualQuality(quality)
+                    player.reloadForQualityChange()
+                    BeansHaptics.select()
+                } label: {
+                    if quality == networkQuality.resolvedQuality {
+                        Label(quality.displayName, systemImage: "checkmark")
+                    } else {
+                        Text(quality.displayName)
+                    }
+                }
+            }
+            if networkQuality.isManual {
+                Divider()
+                Button {
+                    networkQuality.setManualQuality(nil)
+                    player.reloadForQualityChange()
+                    BeansHaptics.select()
+                } label: {
+                    Label("恢复默认音质", systemImage: "arrow.uturn.backward")
+                }
+            }
+        } label: {
+            Label("音质", systemImage: "waveform.badge.magnifyingglass")
         }
     }
 

@@ -494,9 +494,10 @@ final class PlayerManager: NSObject, ObservableObject {
             // 官方地址失败后，使用已启用的自定义音源兜底。
             let enableUnblock = externalSourcesEnabled
             let strictUnlock = shouldLockOfficialOnly(song)
-            let quality = BeansAudioQuality.current
-            let thirdPartyQuality = ThirdPartyAudioQuality.current
-            BeansLogger.shared.log("▶ 开始播放：\(song.name) - \(song.artists)｜平台=\(song.source.rawValue) id=\(song.id) 音质=\(quality.level) 第三方音质=\(thirdPartyQuality.rawValue) 自定义音源=\(enableUnblock ? "开" : "关") 官方受限=\(strictUnlock ? "是" : "否")", level: .info)
+            let networkQuality = NetworkQualityStore.shared
+            let thirdPartyQuality = networkQuality.resolvedQuality
+            let quality = thirdPartyQuality.beansQuality
+            BeansLogger.shared.log("▶ 开始播放：\(song.name) - \(song.artists)｜平台=\(song.source.rawValue) id=\(song.id) 音质=\(thirdPartyQuality.rawValue)(\(quality.level)) 网络=\(networkQuality.networkType.title)\(networkQuality.isManual ? "·手动" : "") 自定义音源=\(enableUnblock ? "开" : "关") 官方受限=\(strictUnlock ? "是" : "否")", level: .info)
             if let mid = song.qqMid {
                 // 播放优先级：内置聆澜音源 → QQ 官方 vkey → 用户自建第三方音源。
                 if LinglanSource.shared.canResolve,
@@ -613,7 +614,7 @@ final class PlayerManager: NSObject, ObservableObject {
         let generation = loadGeneration
         let resume = progress
         let strict = shouldLockOfficialOnly(song)
-        let currentQuality = activeThirdPartyQuality ?? ThirdPartyAudioQuality.current
+        let currentQuality = activeThirdPartyQuality ?? NetworkQualityStore.shared.resolvedQuality
         let attempted = attemptedThirdPartyQualitiesBySong[song.identityKey] ?? []
         guard let thirdPartyQuality = currentQuality.fallbackChain.first(where: {
             !attempted.contains($0.rawValue)
@@ -755,7 +756,7 @@ final class PlayerManager: NSObject, ObservableObject {
         let generation = loadGeneration
         let resume = progress
         let strict = shouldLockOfficialOnly(song)
-        let thirdPartyQuality = ThirdPartyAudioQuality.current
+        let thirdPartyQuality = NetworkQualityStore.shared.resolvedQuality
         BeansLogger.shared.log(
             "QQ 官方地址实际不可播放，切换第三方解析：歌曲=\(song.name)｜系统=\(UIDevice.current.systemVersion)",
             level: .debug
@@ -763,7 +764,7 @@ final class PlayerManager: NSObject, ObservableObject {
         Task {
             let (_, resolved) = await self.qqFallback(
                 song: song,
-                quality: BeansAudioQuality.current,
+                quality: thirdPartyQuality.beansQuality,
                 thirdPartyQuality: thirdPartyQuality,
                 enableUnblock: true,
                 strict: strict
@@ -810,7 +811,7 @@ final class PlayerManager: NSObject, ObservableObject {
     ) {
         guard ensurePlaybackAllowed(), let loadedSong = currentSong else { return }
         if isThirdParty {
-            let quality = thirdPartyQuality ?? ThirdPartyAudioQuality.current
+            let quality = thirdPartyQuality ?? NetworkQualityStore.shared.resolvedQuality
             activeThirdPartyQuality = quality
             activeQQOfficialBR = nil
             if let songKey = currentSong?.identityKey {
@@ -1082,7 +1083,7 @@ final class PlayerManager: NSObject, ObservableObject {
         case .qq:
             return await qqFallback(
                 song: song,
-                quality: BeansAudioQuality.current,
+                quality: NetworkQualityStore.shared.resolvedQuality.beansQuality,
                 thirdPartyQuality: quality,
                 enableUnblock: true,
                 strict: strict,
