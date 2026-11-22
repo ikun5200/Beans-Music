@@ -338,6 +338,7 @@ struct ReferencePlaybackView: View {
                     value: frame
                 )
                 .animation(artworkExpansionAnimation, value: player.isPlaying)
+                .accessibilityHidden(true)
         }
     }
 
