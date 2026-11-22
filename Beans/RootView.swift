@@ -719,8 +719,7 @@ struct TabBarAppearanceConfigurator: UIViewControllerRepresentable {
         DispatchQueue.main.async {
             Self.apply(
                 from: controller,
-                hidesSystemTabBarOnLegacy: hidesSystemTabBarOnLegacy,
-                coordinator: context.coordinator
+                hidesSystemTabBarOnLegacy: hidesSystemTabBarOnLegacy
             )
         }
         return controller
@@ -730,8 +729,7 @@ struct TabBarAppearanceConfigurator: UIViewControllerRepresentable {
         DispatchQueue.main.async {
             Self.apply(
                 from: uiViewController,
-                hidesSystemTabBarOnLegacy: hidesSystemTabBarOnLegacy,
-                coordinator: context.coordinator
+                hidesSystemTabBarOnLegacy: hidesSystemTabBarOnLegacy
             )
         }
     }
@@ -740,11 +738,9 @@ struct TabBarAppearanceConfigurator: UIViewControllerRepresentable {
     /// 材质与模糊完全交给系统对底层页面内容的渲染，不再支持手动调节透明度
     private static func apply(
         from controller: UIViewController,
-        hidesSystemTabBarOnLegacy: Bool,
-        coordinator: Coordinator
+        hidesSystemTabBarOnLegacy: Bool
     ) {
         guard let tabBar = controller.tabBarController?.tabBar else { return }
-        installHomeLongPress(on: tabBar, coordinator: coordinator)
         if #available(iOS 26, *) {
             tabBar.isHidden = false
         } else if hidesSystemTabBarOnLegacy {
@@ -764,22 +760,6 @@ struct TabBarAppearanceConfigurator: UIViewControllerRepresentable {
         tabBar.scrollEdgeAppearance = appearance
         tabBar.tintColor = UIColor.beansAmber
         tabBar.isTranslucent = true
-    }
-
-    private static func installHomeLongPress(on tabBar: UITabBar, coordinator: Coordinator) {
-        let controls = tabBar.subviews
-            .flatMap { descendants(of: $0) }
-            .compactMap { $0 as? UIControl }
-            .filter { !$0.isHidden && $0.alpha > 0 && $0.bounds.width > 0 }
-            .sorted { $0.frame.minX < $1.frame.minX }
-        guard let homeButton = controls.first else { return }
-        guard homeButton.gestureRecognizers?.contains(where: { $0.name == Coordinator.gestureName }) != true else { return }
-
-        let gesture = UILongPressGestureRecognizer(target: coordinator, action: #selector(Coordinator.handleHomeLongPress(_:)))
-        gesture.name = Coordinator.gestureName
-        gesture.minimumPressDuration = 0.45
-        gesture.cancelsTouchesInView = true
-        homeButton.addGestureRecognizer(gesture)
     }
 
     private static func descendants(of view: UIView) -> [UIView] {

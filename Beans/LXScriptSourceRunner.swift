@@ -728,7 +728,7 @@ final class LXScriptSourceRunner {
             "strMediaMid": qqSongMediaMid ?? primaryID,
             "copyrightId": songID,
             "contentId": songID,
-            "hash": resolvedHash,
+            "hash": songID,
             "rid": songID,
             "name": name,
             "songName": name,
