@@ -127,5 +127,15 @@ jobs:
             echo "no version change to commit"
           else
             git commit -m "chore: bump build to $(cat version.txt) [skip ci]"
-            git push
+            # 构建期间维护者可能又推送了新提交：rebase 后重试，避免构建设置为失败
+            pushed=false
+            for attempt in 1 2 3 4 5; do
+              if git push; then pushed=true; break; fi
+              git rebase --abort 2>/dev/null || true
+              git pull --rebase origin main || true
+              sleep 3
+            done
+            if [ "$pushed" != "true" ]; then
+              echo "::warning::version bump push skipped after retries"
+            fi
           fi

@@ -973,6 +973,11 @@ final class QQMusicAPI {
 
     /// QQ 音乐歌词 + 翻译歌词（MeloX 歌词页的翻译来源）
     func lyricDetail(songmid: String) async throws -> (lyric: String?, translation: String?) {
+        // 新版 PlayLyricInfo 接口：同时返回 lyric / trans（base64，crypt=1），
+        // 无需登录即可拿到官方翻译；失败时回退旧版 fcg 接口。
+        if let modern = try? await modernLyricDetail(songmid: songmid), modern.lyric != nil {
+            return modern
+        }
         guard let mid = songmid.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
             return (nil, nil)
         }
@@ -984,6 +989,36 @@ final class QQMusicAPI {
             (lyric?.isEmpty == false) ? lyric : nil,
             (trans?.isEmpty == false) ? trans : nil
         )
+    }
+
+    private func modernLyricDetail(songmid: String) async throws -> (lyric: String?, translation: String?) {
+        let payload: [String: Any] = [
+            "req_1": [
+                "module": "music.musichallSong.PlayLyricInfo",
+                "method": "GetPlayLyricInfo",
+                "param": [
+                    "songMID": songmid,
+                    "trans": 1,
+                    "roma": 1,
+                    "qrc": 0
+                ]
+            ]
+        ]
+        let json = try await musicu(payload)
+        guard let data = (json["req_1"] as? [String: Any])?["data"] as? [String: Any] else {
+            return (nil, nil)
+        }
+        let isBase64 = ((data["crypt"] as? NSNumber)?.intValue ?? 0) == 1
+        func value(_ key: String) -> String? {
+            guard var text = data[key] as? String, !text.isEmpty else { return nil }
+            if isBase64,
+               let decoded = Data(base64Encoded: text),
+               let utf8 = String(data: decoded, encoding: .utf8) {
+                text = utf8
+            }
+            return text.isEmpty ? nil : text
+        }
+        return (value("lyric"), value("trans"))
     }
 
     // MARK: - 评论区 / 排行榜 / 推荐 / 歌单

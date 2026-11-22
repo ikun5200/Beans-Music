@@ -119,7 +119,7 @@ struct ProfileView: View {
                     showSettings = true
                 }
             }
-            Text(LocalizedStringKey(accountStatusLine))
+            Text(isEnglish ? "Account, library and app settings" : "账号、音乐库与应用设置")
                 .font(BeansFont.appFont(12, .medium))
                 .foregroundStyle(Color.beansComment)
                 .lineLimit(2)
