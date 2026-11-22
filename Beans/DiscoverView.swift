@@ -681,58 +681,31 @@ struct DiscoverView: View {
             SectionHeader(title: playlistSectionTitle)
             if visiblePersonalizedPlaylists.isEmpty {
                 EmptyStateView(icon: "music.note.list", text: playlistEmptyText)
-            } else if isNativeClean && !playlistsExpanded {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 16) {
-                        ForEach(visiblePersonalizedPlaylists, id: \.id) { (playlist: Playlist) in
-                            Button {
-                                BeansHaptics.tap()
-                                openRoute(DiscoverRoute.playlist(playlist))
-                            } label: {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    CoverImage(url: playlist.coverURL, size: 166, cornerRadius: 16)
-                                    Text(playlist.name)
-                                        .font(BeansFont.appFont(15, .bold))
-                                        .foregroundStyle(Color.primary)
-                                        .lineLimit(2)
-                                        .multilineTextAlignment(.leading)
-                                        .frame(width: 166, alignment: .leading)
-                                    if playlist.trackCount > 0 {
-                                        Text(beansSongCountText(playlist.trackCount))
-                                            .font(BeansFont.appFont(12, .medium))
-                                            .foregroundStyle(Color.secondary)
-                                            .lineLimit(1)
-                                    }
-                                }
-                                .frame(width: 166, alignment: .leading)
-                            }
-                            .buttonStyle(GlassPressButtonStyle(scale: 0.96))
-                        }
-                    }
-                    .padding(.vertical, 2)
-                }
             } else {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 14) {
                     ForEach(visiblePersonalizedPlaylists) { playlist in
                         Button {
                             openRoute(DiscoverRoute.playlist(playlist))
                         } label: {
                             VStack(alignment: .leading, spacing: 6) {
-                                CoverImage(url: playlist.coverURL, size: 144, cornerRadius: 18)
+                                CoverImage(url: playlist.coverURL, size: 144, cornerRadius: isNativeClean ? 16 : 18)
                                     .frame(maxWidth: .infinity)
                                 Text(playlist.name)
-                                    .font(BeansFont.appFont(12, .medium))
+                                    .font(isNativeClean ? .system(size: 14, weight: .semibold) : BeansFont.appFont(12, .medium))
                                     .foregroundStyle(Color.beansLabel)
                                     .lineLimit(2)
                                     .multilineTextAlignment(.leading)
+                                if playlist.trackCount > 0 {
+                                    Text(beansSongCountText(playlist.trackCount))
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundStyle(Color.secondary)
+                                        .lineLimit(1)
+                                }
                             }
-                            .padding(8)
+                            .padding(isNativeClean ? 0 : 8)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background {
-                                if isNativeClean {
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .fill(Color.primary.opacity(0.04))
-                                } else {
+                                if !isNativeClean {
                                     BeansGlass(shape: RoundedRectangle(cornerRadius: 22, style: .continuous))
                                 }
                             }
