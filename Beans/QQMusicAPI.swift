@@ -1012,8 +1012,14 @@ final class QQMusicAPI {
         func value(_ key: String) -> String? {
             guard var text = data[key] as? String, !text.isEmpty else { return nil }
             if isBase64,
-               let decoded = Data(base64Encoded: text),
+               let decoded = Data(base64Encoded: text, options: .ignoreUnknownCharacters),
                let utf8 = String(data: decoded, encoding: .utf8) {
+                text = utf8
+            } else if !text.contains("["),
+                      let decoded = Data(base64Encoded: text, options: .ignoreUnknownCharacters),
+                      let utf8 = String(data: decoded, encoding: .utf8),
+                      utf8.contains("[") {
+                // 服务端偶发 crypt=0 但内容仍为 base64，按内容特征兜底解码
                 text = utf8
             }
             return text.isEmpty ? nil : text

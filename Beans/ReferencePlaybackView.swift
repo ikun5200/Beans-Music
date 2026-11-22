@@ -100,7 +100,7 @@ struct ReferencePlaybackView: View {
     /// 歌词页界面显隐（MeloX showsLyricsControls）
     @State private var chromeVisible = true
     /// 翻译显示（MeloX lyricsTranslationEnabled，默认开启）
-    @State private var showTranslations = true
+    @AppStorage("beans.lyrics.showTranslation") private var showTranslations = true
     @State private var autoHideTask: Task<Void, Never>?
     @State private var lastAutoHideSchedule = Date.distantPast
 
