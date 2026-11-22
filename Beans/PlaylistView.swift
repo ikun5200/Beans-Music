@@ -70,10 +70,10 @@ struct PlaylistView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: isNativeClean ? 18 : 14) {
-                CoverImage(url: playlist.coverURL, size: 96, cornerRadius: 18)
+                CoverImage(url: playlist.coverURL, size: isNativeClean ? 150 : 96, cornerRadius: isNativeClean ? 20 : 18)
                 VStack(alignment: .leading, spacing: 6) {
                     Text(playlist.name)
-                        .font(BeansFont.appFont(18, .bold))
+                        .font(isNativeClean ? .system(size: 22, weight: .bold) : BeansFont.appFont(18, .bold))
                         .foregroundStyle(Color.beansLabel)
                         .lineLimit(2)
                     if !playlist.creatorName.isEmpty {
@@ -138,8 +138,12 @@ struct PlaylistView: View {
                 }
             }
         }
-        .padding(14)
-        .background { BeansSurface(shape: RoundedRectangle(cornerRadius: 24, style: .continuous)) }
+        .padding(isNativeClean ? 0 : 14)
+        .background {
+            if !isNativeClean {
+                BeansSurface(shape: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            }
+        }
     }
 
     /// 歌单内搜索 + 排序后的列表

@@ -412,10 +412,14 @@ struct ReferencePlaybackView: View {
             action()
         } label: {
             Image(systemName: icon)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(active ? accentColor : primaryColor.opacity(0.78))
-                .frame(width: 58, height: 58)
-                .background { BeansGlass(shape: Circle(), forceLiquid: true) }
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(active ? accentColor : primaryColor.opacity(0.80))
+                .frame(width: 54, height: 54)
+                .background {
+                    if active {
+                        Circle().fill(Color.white.opacity(0.14))
+                    }
+                }
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

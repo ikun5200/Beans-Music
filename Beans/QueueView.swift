@@ -95,7 +95,8 @@ struct QueueView: View {
         .padding(.vertical, 8)
         .contentShape(Rectangle())
         .background {
-                        BeansGlass(shape: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.primary.opacity(0.03))
         }
         .onTapGesture {
             if player.queue.indices.contains(index) {
