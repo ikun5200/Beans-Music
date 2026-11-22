@@ -111,7 +111,6 @@ struct PlayerView: View {
     @AppStorage("beans.albumTextGlow") private var albumTextGlow = false
     @AppStorage("beans.albumTextGlowIntensity") private var albumTextGlowIntensity = 1.0
     @AppStorage("beans.coverPlayerStyle") private var coverPlayerStyleRaw = BeansCoverPlayerStyle.appleMusic.rawValue
-    @AppStorage("beans.appleMusic.showVolume") private var appleShowVolume = false
     @AppStorage("beans.appleMusic.primaryHex") private var applePrimaryHex = ""
     @AppStorage("beans.appleMusic.secondaryHex") private var appleSecondaryHex = ""
     @AppStorage("beans.appleMusic.accentHex") private var appleAccentHex = ""
@@ -2727,9 +2726,6 @@ struct PlayerView: View {
                 .foregroundStyle(Color.beansLabel)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            Toggle("显示音量条", isOn: $appleShowVolume)
-                .font(BeansFont.appFont(12))
-                .tint(Color.beansAmber)
             Toggle("同步主页壁纸", isOn: $appleSyncWallpaper)
                 .font(BeansFont.appFont(12))
                 .tint(Color.beansAmber)
@@ -2766,7 +2762,6 @@ struct PlayerView: View {
         appleSecondaryHex = ""
         appleAccentHex = ""
         appleVolumeHex = ""
-        appleShowVolume = false
         appleSyncWallpaper = false
         appleWallpaperBlur = 14
     }
@@ -2947,8 +2942,10 @@ struct PlayerView: View {
             self.lyrics = parsed
         }
         if let mid = song.qqMid {
-            if let raw = try? await QQMusicAPI.shared.lyric(songmid: mid) {
-                apply(LyricParser.parse(raw))
+            if let detail = try? await QQMusicAPI.shared.lyricDetail(songmid: mid),
+               let raw = detail.lyric {
+                // 同时合并翻译歌词（歌词页语言按钮可切换显示）
+                apply(LyricParser.parse(raw, translationRaw: detail.translation))
             }
         }
     }

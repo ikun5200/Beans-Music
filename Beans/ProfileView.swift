@@ -132,6 +132,146 @@ struct ProfileView: View {
         .padding(.top, 4)
     }
 
+    // MARK: - MeloX / Apple Music 分组列表
+
+    private var meloProfileRows: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            VStack(spacing: 0) {
+                meloRow(
+                    icon: "person.crop.circle.fill",
+                    tint: Color(red: 0.56, green: 0.56, blue: 0.60),
+                    title: isEnglish ? "QQ Music Account" : "QQ 音乐账号",
+                    subtitle: accountStatusLine,
+                    showsChevron: true
+                ) {
+                    BeansHaptics.tap()
+                    showAccountHub = true
+                }
+
+                meloDivider
+
+                meloRow(
+                    icon: "clock.arrow.circlepath",
+                    tint: Color(red: 0.98, green: 0.48, blue: 0.10),
+                    title: isEnglish ? "Recently Played" : "播放历史",
+                    subtitle: String(format: NSLocalizedString("最近播放 %d 首", comment: ""), player.history.count),
+                    showsChevron: true
+                ) {
+                    BeansHaptics.tap()
+                    showHistory = true
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text("关于")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(Color.beansLabel)
+                    .padding(.bottom, 8)
+
+                meloRow(
+                    icon: "arrow.up.circle.fill",
+                    tint: Color(red: 0.0, green: 0.48, blue: 1.0),
+                    title: "更新地址",
+                    subtitle: "GitHub：ikun5200/Beans-Music",
+                    showsChevron: false
+                ) {
+                    BeansHaptics.tap()
+                    if let url = URL(string: "https://github.com/ikun5200/Beans-Music") {
+                        UIApplication.shared.open(url)
+                    }
+                }
+
+                meloDivider
+
+                meloRow(
+                    icon: checkingUpdate ? "arrow.triangle.2.circlepath" : "checkmark.circle.fill",
+                    tint: Color(red: 0.20, green: 0.78, blue: 0.35),
+                    title: checkingUpdate ? "正在检查…" : "检查更新",
+                    subtitle: nil,
+                    showsChevron: false
+                ) {
+                    checkForUpdateFromProfile()
+                }
+                .disabled(checkingUpdate)
+            }
+
+            profileVersionFooter
+        }
+    }
+
+    private func meloRow(
+        icon: String,
+        tint: Color,
+        title: String,
+        subtitle: String?,
+        showsChevron: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(tint, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(LocalizedStringKey(title))
+                        .font(.system(size: 17))
+                        .foregroundStyle(Color.beansLabel)
+                        .lineLimit(1)
+                    if let subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.beansComment)
+                            .lineLimit(1)
+                    }
+                }
+
+                Spacer(minLength: 8)
+
+                if showsChevron {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.beansComment.opacity(0.55))
+                }
+            }
+            .frame(minHeight: 56)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var meloDivider: some View {
+        Rectangle()
+            .fill(Color.beansComment.opacity(0.14))
+            .frame(height: 0.5)
+            .padding(.leading, 44)
+    }
+
+    private func checkForUpdateFromProfile() {
+        BeansHaptics.tap()
+        guard !checkingUpdate else { return }
+        checkingUpdate = true
+        Task {
+            let result = await UpdateChecker.checkNow()
+            await MainActor.run {
+                checkingUpdate = false
+                updateResult = result
+                if case .update(let info) = result {
+                    pendingUpdateInfo = info
+                    if let assetURL = info.assetURL {
+                        startAutoDownload(info: info, assetURL: assetURL)
+                    } else {
+                        showUpdateResult = true
+                    }
+                } else {
+                    showUpdateResult = true
+                }
+            }
+        }
+    }
+
     var body: some View {
         let _ = theme.accent
         ZStack {
@@ -143,18 +283,19 @@ struct ProfileView: View {
                 LazyVStack(alignment: .leading, spacing: isNativeClean ? 26 : 22) {
                     if isNativeClean {
                         appleHeader
+                        meloProfileRows
                     } else {
                         header
+                        // 板块按用户自定义顺序渲染（可拖拽排序）
+                        ForEach(profileOrder, id: \.self) { (key: String) in
+                            profileSection(for: key)
+                        }
+                        // 更新入口固定放在“我的”页面最底部，避免被板块排序隐藏。
+                        updateLinkCard
+                        profileVersionFooter
                     }
-                    // 板块按用户自定义顺序渲染（可拖拽排序）
-                    ForEach(profileOrder, id: \.self) { (key: String) in
-                        profileSection(for: key)
-                    }
-                    // 更新入口固定放在“我的”页面最底部，避免被板块排序隐藏。
-                    updateLinkCard
-                    profileVersionFooter
                 }
-                .padding(.horizontal, isNativeClean ? 24 : 16)
+                .padding(.horizontal, isNativeClean ? 20 : 16)
                 .padding(.top, isNativeClean ? 14 : 8)
                 .padding(.bottom, 190)
                 .frame(maxWidth: 860)

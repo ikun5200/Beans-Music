@@ -968,11 +968,22 @@ final class QQMusicAPI {
 
     /// QQ 音乐歌词（LRC 文本）
     func lyric(songmid: String) async throws -> String? {
-        guard let mid = songmid.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return nil }
+        try await lyricDetail(songmid: songmid).lyric
+    }
+
+    /// QQ 音乐歌词 + 翻译歌词（MeloX 歌词页的翻译来源）
+    func lyricDetail(songmid: String) async throws -> (lyric: String?, translation: String?) {
+        guard let mid = songmid.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            return (nil, nil)
+        }
         let url = "https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg?songmid=\(mid)&format=json&nobase64=1&g_tk=5381"
         let json = try await get(url, referer: "https://y.qq.com/portal/player.html")
-        guard let lyric = json["lyric"] as? String, !lyric.isEmpty else { return nil }
-        return lyric
+        let lyric = json["lyric"] as? String
+        let trans = (json["trans"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (
+            (lyric?.isEmpty == false) ? lyric : nil,
+            (trans?.isEmpty == false) ? trans : nil
+        )
     }
 
     // MARK: - 评论区 / 排行榜 / 推荐 / 歌单
