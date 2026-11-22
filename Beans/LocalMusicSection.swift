@@ -179,7 +179,6 @@ struct LocalMusicSection: View {
         .sheet(item: $selected) { playlist in
             LocalPlaylistDetailSheet(playlistID: playlist.id)
                 .environmentObject(player)
-                .environmentObject(auth)
         }
     }
 
@@ -509,7 +508,6 @@ struct LocalPlaylistDetailSheet: View {
         .sheet(isPresented: $showSearchAdd) {
             LocalSearchAddSheet(playlistID: playlistID)
                 .environmentObject(player)
-                .environmentObject(auth)
         }
         .alert("重命名歌单", isPresented: $showRename) {
             TextField("歌单名称", text: $renameText)

@@ -242,7 +242,6 @@ struct LibraryView: View {
         case .playlist(let playlist):
             PlaylistView(playlist: playlist)
                 .environmentObject(player)
-                .environmentObject(auth)
                 .environmentObject(theme)
         }
     }

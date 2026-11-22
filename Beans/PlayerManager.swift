@@ -601,6 +601,11 @@ final class PlayerManager: NSObject, ObservableObject {
         return (nil, resolved)
     }
 
+    /// 保留扩展位：跨平台兜底已移除，恒返回 false（不再按歌手硬拦截官方播放）。
+    private func shouldLockOfficialOnly(_ song: Song) -> Bool {
+        false
+    }
+
     /// 酷狗兜底：官方播放失败后使用内置音源作为备选。
     private func kugouFallback(
         song: Song,

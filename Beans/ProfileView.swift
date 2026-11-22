@@ -167,15 +167,8 @@ struct ProfileView: View {
                         header
                     }
                     // 板块按用户自定义顺序渲染（可拖拽排序）
-                    ForEach(profileOrder, id: \.self) { key in
-                        switch key {
-                        case "账号":
-                            userCard
-                        case "关于":
-                            EmptyView()
-                        default:
-                            EmptyView()
-                        }
+                    ForEach(profileOrder, id: \.self) { (key: String) in
+                        profileSection(for: key)
                     }
                     // 更新入口固定放在“我的”页面最底部，避免被板块排序隐藏。
                     updateLinkCard
@@ -211,12 +204,10 @@ struct ProfileView: View {
         .sheet(isPresented: $showHistory) {
             HistoryView()
                 .environmentObject(player)
-                .environmentObject(auth)
                 .environmentObject(theme)
         }
         .sheet(isPresented: $showAccountHub) {
             AccountHubSheet()
-                .environmentObject(auth)
                 .environmentObject(theme)
         }
         .fullScreenCover(isPresented: $showSettings) {
@@ -323,6 +314,19 @@ struct ProfileView: View {
             .padding(32)
         }
         .transition(.opacity)
+    }
+
+    /// “我的”页板块渲染（拆出函数以降低主 body 的类型推断负担）
+    @ViewBuilder
+    private func profileSection(for key: String) -> some View {
+        switch key {
+        case "账号":
+            userCard
+        case "关于":
+            EmptyView()
+        default:
+            EmptyView()
+        }
     }
 
     private var userCard: some View {

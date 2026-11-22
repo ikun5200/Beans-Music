@@ -466,7 +466,6 @@ private struct BeansDetailMiniPlayerModifier: ViewModifier {
                     usesSystemInteractiveDismissal: false
                 ) {
                     PlayerView(isPresented: $showPlayer)
-                        .environmentObject(auth)
                         .environmentObject(player)
                         .environmentObject(player.clock)
                         .environmentObject(theme)

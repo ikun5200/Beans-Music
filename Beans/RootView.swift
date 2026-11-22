@@ -352,7 +352,6 @@ struct RootView: View {
                 .environmentObject(favorites)
                 .environmentObject(player)
                 .environmentObject(player.clock)
-                .environmentObject(auth)
         }
     }
 }

@@ -223,19 +223,15 @@ struct DiscoverView: View {
         case .playlist(let playlist):
             PlaylistView(playlist: playlist)
                 .environmentObject(player)
-                .environmentObject(auth)
         case .qqTopList(let info):
             QQTopListDetailView(topID: info.id, name: info.name)
                 .environmentObject(player)
-                .environmentObject(auth)
         case .kugouTopList(let info):
             KugouTopListDetailView(topList: info)
                 .environmentObject(player)
-                .environmentObject(auth)
         case .dailySongs(let songs):
             DailySongsSheet(songs: songs)
                 .environmentObject(player)
-                .environmentObject(auth)
         }
     }
 
@@ -863,14 +859,6 @@ struct DiscoverView: View {
     }
 
     // MARK: - 歌单广场（官方分类 + 双列网格）
-
-    /// 官方歌单分类：全部 + 热门分类（接口失败时用内置兜底）
-    private var catChips: [String] {
-        if playlistCats.isEmpty {
-            return ["全部", "华语", "流行", "经典", "摇滚", "民谣", "电子", "影视原声", "ACG", "怀旧", "欧美", "日韩", "粤语", "古风", "轻音乐", "治愈", "学习", "运动", "夜晚"]
-        }
-        return ["全部"] + Array(playlistCats.prefix(18))
-    }
 
     private var personalizedSection: some View {
         VStack(alignment: .leading, spacing: 12) {
