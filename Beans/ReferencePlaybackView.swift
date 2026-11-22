@@ -525,11 +525,12 @@ struct ReferencePlaybackView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
-            .scaleEffect(isFocused ? 1.06 : 0.84, anchor: .leading)
-            .blur(radius: isFocused ? 0 : 0.7)
+            .scaleEffect(isFocused ? 1.05 : 0.86, anchor: .leading)
+            .opacity(isFocused ? 1 : 0.92)
+            .blur(radius: isFocused ? 0 : 0.5)
         }
         .buttonStyle(.plain)
-        .animation(.spring(response: 0.28, dampingFraction: 0.88), value: isFocused)
+        .animation(.beansSmooth, value: isFocused)
     }
 
     private func updateFocusedLyric(from centers: [UUID: CGFloat]) {

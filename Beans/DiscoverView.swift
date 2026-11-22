@@ -205,7 +205,7 @@ struct DiscoverView: View {
                                     Text(verbatim: line)
                                 }
                             }
-                            .font(BeansFont.greetingFont(isNativeClean ? max(42, greetingLineSize(index)) : greetingLineSize(index), .bold))
+                            .font(BeansFont.greetingFont(isNativeClean ? max(38, greetingLineSize(index)) : greetingLineSize(index), .bold))
                             .foregroundStyle(greetingLineStyle(index))
                                     .overlay(alignment: .bottomLeading) {
                                         if homeGreetingUnderline {
@@ -331,18 +331,22 @@ struct DiscoverView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 6)
             .background {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Color.black.opacity(0.06))
-                    .background {
-                        BeansGlass(shape: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.8)
-                    }
+                if isNativeClean {
+                    Color.clear
+                } else {
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(Color.black.opacity(0.06))
+                        .background {
+                            BeansGlass(shape: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        }
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.8)
+                        }
+                }
             }
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .beansCardShadow(radius: 9, y: 3)
+            .beansCardShadow(radius: isNativeClean ? 0 : 9, y: isNativeClean ? 0 : 3)
             .id("rankTopSection")
         }
         }
@@ -483,7 +487,49 @@ struct DiscoverView: View {
 
     @ViewBuilder
     private var dailySection: some View {
-        dailySongCards
+        if isNativeClean {
+            VStack(alignment: .leading, spacing: 18) {
+                dailyHeroCard
+                dailySongCards
+            }
+        } else {
+            dailySongCards
+        }
+    }
+
+    /// MeloX 风格渐变推荐卡
+    private var dailyHeroCard: some View {
+        Button {
+            BeansHaptics.tap()
+            openRoute(DiscoverRoute.dailySongs(dailySongs))
+        } label: {
+            ZStack(alignment: .bottomLeading) {
+                RoundedRectangle(cornerRadius: MeloDesign.cardRadius, style: .continuous)
+                    .fill(LinearGradient(
+                        colors: [MeloDesign.accent, Color(red: 0.78, green: 0.06, blue: 0.16)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                    .frame(height: 178)
+                Image(systemName: "calendar.badge.clock")
+                    .font(.system(size: 62, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.20))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .padding(20)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("每日推荐")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text("为你定制的歌曲")
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.78))
+                }
+                .padding(20)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: MeloDesign.cardRadius, style: .continuous))
+            .shadow(color: .black.opacity(0.12), radius: 14, y: 8)
+        }
+        .buttonStyle(GlassPressButtonStyle(scale: 0.985))
     }
 
     private var dailySongCards: some View {

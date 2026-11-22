@@ -135,7 +135,7 @@ struct SearchView: View {
     private var headerTitle: some View {
         HStack(alignment: .center, spacing: 10) {
             Text("搜索")
-                .font(BeansFont.appFont(32, .bold))
+                .font(.system(size: 34, weight: .bold))
                 .foregroundStyle(Color.beansLabel)
             Spacer(minLength: 0)
         }
