@@ -220,7 +220,7 @@ struct SearchView: View {
                     .foregroundStyle(Color.beansAmber)
                     .padding(.horizontal, 13)
                     .padding(.vertical, 6)
-                    .background { BeansGlass(shape: Capsule()) }
+                    .background { BeansGlass(shape: Capsule(), controlSurface: true, interactive: true) }
             }
             .buttonStyle(GlassPressButtonStyle(scale: 0.9))
             .frame(width: 54, height: 30)
@@ -228,7 +228,7 @@ struct SearchView: View {
         .padding(.horizontal, 15)
         .padding(.vertical, 6)
         .background {
-            BeansGlass(shape: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            BeansGlass(shape: RoundedRectangle(cornerRadius: 18, style: .continuous), controlSurface: true)
         }
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .beansCardShadow(radius: 4, y: 2)
@@ -370,7 +370,7 @@ struct SearchView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
             .background {
-                BeansGlass(shape: Capsule())
+                BeansGlass(shape: Capsule(), controlSurface: true, interactive: true)
             }
             .overlay {
                 if top3 {

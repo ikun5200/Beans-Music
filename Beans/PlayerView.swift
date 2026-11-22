@@ -2280,7 +2280,7 @@ struct PlayerView: View {
         switch playerButtonStyle {
         case .glass:
             ZStack {
-                BeansGlass(shape: Circle())
+                BeansGlass(shape: Circle(), controlSurface: true, interactive: true)
                 if primary {
                     Circle()
                         .fill(

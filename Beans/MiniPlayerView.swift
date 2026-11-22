@@ -121,7 +121,9 @@ struct MiniPlayerView: View {
                     // 普通底部浮层：保留卡片质感与阴影。
                     BeansGlass(
                         shape: RoundedRectangle(cornerRadius: containerRadius, style: .continuous),
-                        forceLiquid: false
+                        forceLiquid: false,
+                        controlSurface: true,
+                        interactive: true
                     )
                     .overlay {
                         LinearGradient(

@@ -279,7 +279,7 @@ struct RootView: View {
             .padding(22)
             .frame(maxWidth: 300)
             .background {
-                BeansGlass(shape: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                BeansGlass(shape: RoundedRectangle(cornerRadius: 24, style: .continuous), controlSurface: true, interactive: true)
             }
             .beansCardShadow(radius: 12, y: 6)
             .padding(32)
@@ -691,7 +691,7 @@ private struct UpdatePromptOverlay: View {
             .padding(20)
             .frame(maxWidth: 360)
             .background {
-                BeansGlass(shape: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                BeansGlass(shape: RoundedRectangle(cornerRadius: 24, style: .continuous), controlSurface: true, interactive: true)
             }
             .beansCardShadow(radius: 16, y: 8)
             .padding(.horizontal, 24)

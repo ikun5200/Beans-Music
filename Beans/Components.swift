@@ -67,7 +67,7 @@ struct GlassPressButtonStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? scale : 1)
             .brightness(configuration.isPressed ? 0.025 : 0)
-            .animation(.spring(response: 0.24, dampingFraction: 0.82), value: configuration.isPressed)
+            .animation(.beansSnappy, value: configuration.isPressed)
     }
 }
 
@@ -170,6 +170,11 @@ struct BeansGlass<S: Shape>: View {
 
     let shape: S
     var forceLiquid = false
+    /// 控件层玻璃（按钮、输入框、播放条）：iOS 26 使用系统原生 `.regular` 变体，
+    /// 获得折射、高光与触摸响应；内容卡片保持 `.clear` 以避免抢走内容焦点。
+    var controlSurface = false
+    /// 与 `controlSurface` 搭配：玻璃随按压产生流体响应（对应 `Glass.interactive()`）。
+    var interactive = false
 
     private var uiStyle: BeansUIStyle {
         uiStyleRaw == "outline" ? .clear : (BeansUIStyle(rawValue: uiStyleRaw) ?? .liquid)
@@ -179,13 +184,19 @@ struct BeansGlass<S: Shape>: View {
         forceLiquid || uiStyle == .liquid || uiStyle == .nativeClean
     }
 
+    @available(iOS 26.0, *)
+    private var glassVariant: Glass {
+        guard controlSurface else { return .clear }
+        return interactive ? .regular.interactive() : .regular
+    }
+
     var body: some View {
         if isLiquid {
             if #available(iOS 26, *) {
                 GlassEffectContainer {
                     shape
                         .fill(.clear)
-                        .glassEffect(.clear, in: shape)
+                        .glassEffect(glassVariant, in: shape)
                 }
             } else {
                 shape
@@ -248,6 +259,12 @@ struct GlassCard<Content: View>: View {
         if uiStyle == .compact { return 12 }
         if uiStyle == .nativeClean { return 13 }
         return 16
+    }
+
+    @available(iOS 26.0, *)
+    private var glassVariant: Glass {
+        guard controlSurface else { return .clear }
+        return interactive ? .regular.interactive() : .regular
     }
 
     var body: some View {
@@ -582,7 +599,7 @@ struct GlassIconButton: View {
                     if isNativeClean && !forceLiquid {
                         Circle().fill(active ? Color.beansAmber.opacity(0.12) : .clear)
                     } else {
-                        BeansGlass(shape: Circle())
+                        BeansGlass(shape: Circle(), controlSurface: true, interactive: true)
                     }
                 }
                 .clipShape(Circle())
@@ -622,7 +639,7 @@ struct GlassButton: View {
             .background {
                 if prominent {
                     ZStack {
-                        BeansGlass(shape: Capsule(), forceLiquid: true)
+                        BeansGlass(shape: Capsule(), forceLiquid: true, controlSurface: true, interactive: true)
                         Capsule().fill(Color.beansAmber.opacity(0.78))
                     }
                 } else if isNativeClean {
