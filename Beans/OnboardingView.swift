@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - 首次使用引导页（分页引导 + 免责确认）
 
-/// 首次进入 App 时的引导式提示：欢迎 → DIY 美化 → 三平台 → 免责确认。
+/// 首次进入 App 时的引导式提示：欢迎 → DIY 美化 → QQ 音乐 → 免责确认。
 /// 免责确认沿用原硬性要求：必须输入「我已了解并同意继续使用」才能进入软件。
 struct OnboardingView: View {
     let onFinish: () -> Void
@@ -270,7 +270,7 @@ struct OnboardingView: View {
         .beansCardShadow(radius: 8, y: 3)
     }
 
-    // MARK: 第 3 页 · 三平台
+    // MARK: 第 3 页 · QQ 音乐
 
     private var platformPage: some View {
         VStack(spacing: 20) {

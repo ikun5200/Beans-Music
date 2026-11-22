@@ -1223,7 +1223,7 @@ private struct HomeUnifiedSearchSheet: View {
             SearchTextField(
                 text: $keyword,
                 controller: searchController,
-                placeholder: beansLocalized("搜索三平台歌曲", "Search across three platforms"),
+                placeholder: beansLocalized("搜索 QQ 音乐", "Search QQ Music"),
                 textColor: UIColor.beansLabel,
                 onSubmit: { text in
                     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)

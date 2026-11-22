@@ -110,7 +110,7 @@ final class LocalLibraryStore: ObservableObject {
     }
 
     @discardableResult
-    func syncSongs(_ songs: [Song], intoPlaylistNamed name: String = "三平台喜欢") -> Int {
+    func syncSongs(_ songs: [Song], intoPlaylistNamed name: String = "QQ音乐喜欢") -> Int {
         let target: LocalPlaylist
         if let existing = playlists.first(where: { $0.name == name }) {
             target = existing
