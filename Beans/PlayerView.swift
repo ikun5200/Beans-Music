@@ -2270,8 +2270,12 @@ struct PlayerView: View {
 
     /// 播放页手动音质菜单：只对本次运行有效，重启恢复设置的默认音质。
     private var qualityMenu: some View {
+        qualityMenuList(networkQuality.availablePlaybackQualities)
+    }
+
+    private func qualityMenuList(_ qualities: [ThirdPartyAudioQuality]) -> some View {
         Menu {
-            ForEach(networkQuality.availablePlaybackQualities) { quality in
+            ForEach(qualities, id: \.rawValue) { (quality: ThirdPartyAudioQuality) in
                 Button {
                     networkQuality.setManualQuality(quality)
                     player.reloadForQualityChange()

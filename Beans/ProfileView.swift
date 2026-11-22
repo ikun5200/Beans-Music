@@ -1000,7 +1000,7 @@ struct SettingsView: View {
             }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(networkQuality.availablePlaybackQualities) { quality in
+                    ForEach(networkQuality.availablePlaybackQualities, id: \.rawValue) { (quality: ThirdPartyAudioQuality) in
                         let selected = selection.wrappedValue.rawValue == quality.rawValue
                         Button {
                             selection.wrappedValue = quality
