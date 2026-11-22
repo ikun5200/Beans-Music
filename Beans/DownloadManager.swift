@@ -187,6 +187,7 @@ final class DownloadManager {
                   let url = URL(string: urlString) else { return nil }
             return ResolvedDownloadURL(url: url, actualQuality: quality, sourceName: nil)
         }
+        return nil
     }
 
     private func downloadRequest(for url: URL, song: Song) -> URLRequest {
