@@ -705,14 +705,14 @@ struct AlbumDetailView: View {
                     List {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(spacing: 14) {
-                                CoverImage(url: album.coverURL, size: 92, cornerRadius: 16)
+                                CoverImage(url: album.coverURL, size: 150, cornerRadius: 20)
                                 VStack(alignment: .leading, spacing: 5) {
                                     Text(album.name)
-                                        .font(BeansFont.appFont(19, .bold))
+                                        .font(.system(size: 22, weight: .bold))
                                         .foregroundStyle(Color.beansLabel)
                                         .lineLimit(2)
                                     Text(album.artistName.isEmpty ? "未知歌手" : album.artistName)
-                                        .font(BeansFont.appFont(13))
+                                        .font(.system(size: 13, weight: .medium))
                                         .foregroundStyle(Color.beansComment)
                                     Text(beansSongCountText(tracks.count))
                                         .font(BeansFont.appFont(12))

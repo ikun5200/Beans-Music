@@ -79,13 +79,13 @@ struct ArtistHomeSheet: View {
                         .foregroundStyle(Color.beansComment)
                 }
             }
-            .frame(width: 72, height: 72)
+            .frame(width: 96, height: 96)
             .clipShape(Circle())
             .background(Color.beansGlassFill, in: Circle())
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(artist?.name ?? artistName)
-                    .font(BeansFont.appFont(20, .bold))
+                    .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(Color.beansLabel)
                     .lineLimit(1)
                     .truncationMode(.tail)
