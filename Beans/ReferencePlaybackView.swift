@@ -97,6 +97,7 @@ struct ReferencePlaybackView: View {
     /// 封面页大封面在页面坐标系中的位置（用于跨页封面变形动画）
     @State private var artworkPageFrame: CGRect = .zero
     @State private var isPageTransitioning = false
+    @State private var pageTransitionGeneration = 0
     /// 歌词页界面显隐（MeloX showsLyricsControls）
     @State private var chromeVisible = true
     /// 翻译显示（MeloX lyricsTranslationEnabled，默认开启）
@@ -397,9 +398,11 @@ struct ReferencePlaybackView: View {
         }
         // 过渡期间不接收封面测量值（避免把 -300 的临时位移记录为最终位置）
         isPageTransitioning = true
+        pageTransitionGeneration += 1
+        let generation = pageTransitionGeneration
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 550_000_000)
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, generation == pageTransitionGeneration else { return }
             isPageTransitioning = false
         }
         if syncBinding {
@@ -473,7 +476,7 @@ struct ReferencePlaybackView: View {
                     }
                     Text(subtitle)
                         .font(.system(size: 20))
-                        .foregroundStyle(primaryColor.opacity(0.64))
+                        .foregroundStyle(secondaryColor)
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -511,7 +514,7 @@ struct ReferencePlaybackView: View {
                     .truncationMode(.tail)
                 Text(song?.artists ?? "")
                     .font(.system(size: 20))
-                    .foregroundStyle(primaryColor.opacity(0.64))
+                    .foregroundStyle(secondaryColor)
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
@@ -846,7 +849,7 @@ struct ReferencePlaybackView: View {
             Color.clear.frame(height: 31)
 
             interfaceLayer(offset: 148, showDelay: 0.075, hideDelay: 0.025) {
-                ReferenceVolumeControl()
+                ReferenceVolumeControl(tint: volumeColor)
                     .modifier(AppleMusicLayoutTransform(entry: layoutEntry(.volume)))
             }
 
@@ -1350,6 +1353,8 @@ private struct ReferenceScrubber: View {
 // MARK: - 音量（MeloX NowPlayingVolumeControl：高 42，系统音量条）
 
 private struct ReferenceVolumeControl: View {
+    var tint: Color = .white
+
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "speaker.fill")
@@ -1361,7 +1366,7 @@ private struct ReferenceVolumeControl: View {
             Image(systemName: "speaker.wave.3.fill")
                 .font(.system(size: 12))
         }
-        .foregroundStyle(.white.opacity(0.62))
+        .foregroundStyle(tint.opacity(0.62))
         .frame(height: 42)
     }
 }

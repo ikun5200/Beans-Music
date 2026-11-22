@@ -64,7 +64,7 @@ final class NowPlayingBackdropView: UIView {
         imageView.isUserInteractionEnabled = false
 
         scrimView.isUserInteractionEnabled = false
-        scrimView.backgroundColor = UIColor.black.withAlphaComponent(0.42)
+        scrimView.backgroundColor = UIColor.black.withAlphaComponent(0.48)
 
         glowView.isUserInteractionEnabled = false
         glowView.backgroundColor = UIColor.white.withAlphaComponent(0.10)
@@ -136,7 +136,7 @@ final class NowPlayingBackdropView: UIView {
             self.zoomView.transform = enabled
                 ? CGAffineTransform(scaleX: 1.10, y: 1.10)
                 : .identity
-            self.scrimView.backgroundColor = UIColor.black.withAlphaComponent(enabled ? 0.50 : 0.42)
+            self.scrimView.backgroundColor = UIColor.black.withAlphaComponent(enabled ? 0.54 : 0.48)
         }
         guard animated else {
             apply()

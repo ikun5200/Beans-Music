@@ -308,13 +308,13 @@ struct LocalPlaylistDetailSheet: View {
                                             toggleSelection(song)
                                         }
                                         .listRowBackground(Color.clear)
-                                        .listRowSeparator(.hidden)
+                                        .nativeListSeparator()
                                     } else {
                                         SongCell(song: song, glassRow: true, playbackContext: playlist.songs, playbackIndex: index) {
                                             player.play(songs: playlist.songs, startAt: index)
                                         }
                                         .listRowBackground(Color.clear)
-                                        .listRowSeparator(.hidden)
+                                        .nativeListSeparator()
                                         .swipeActions(edge: .trailing) {
                                             Button(role: .destructive) {
                                                 BeansHaptics.tap()
@@ -518,7 +518,7 @@ struct LocalSearchAddSheet: View {
                                 ToastCenter.shared.show("已加入本地歌单")
                             }
                             .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
+                            .nativeListSeparator()
                         }
                     }
                     .listStyle(.plain)

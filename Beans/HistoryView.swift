@@ -17,7 +17,7 @@ struct HistoryView: View {
                                 player.play(songs: player.history, startAt: index)
                             }
                             .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
+                            .nativeListSeparator()
                         }
                         .onDelete { offsets in
                             player.removeHistory(at: offsets)

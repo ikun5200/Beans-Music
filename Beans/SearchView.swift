@@ -692,6 +692,11 @@ struct AlbumDetailView: View {
     @State private var tracks: [Song] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @AppStorage("beans.uiStyle") private var uiStyleRaw = BeansUIStyle.liquid.rawValue
+
+    private var isNativeClean: Bool {
+        BeansUIStyle(rawValue: uiStyleRaw) == .nativeClean
+    }
 
     var body: some View {
         BeansNavigationStack {
@@ -735,7 +740,8 @@ struct AlbumDetailView: View {
                                 player.play(songs: tracks, startAt: index)
                             }
                             .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
+                            .listRowSeparator(isNativeClean ? .visible : .hidden)
+                            .listRowSeparatorTint(Color.primary.opacity(0.12))
                         }
                     }
                     .listStyle(.plain)

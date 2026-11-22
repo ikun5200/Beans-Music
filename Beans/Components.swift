@@ -658,6 +658,24 @@ struct GlassButton: View {
 
 // MARK: - 区块标题
 
+/// Apple Music / MeloX 歌曲列表分隔线：nativeClean 下显示系统分隔线，其他风格保持无分隔（整行玻璃卡）。
+private struct NativeListSeparatorModifier: ViewModifier {
+    @AppStorage("beans.uiStyle") private var uiStyleRaw = BeansUIStyle.liquid.rawValue
+
+    func body(content: Content) -> some View {
+        let isNative = BeansUIStyle(rawValue: uiStyleRaw) == .nativeClean
+        content
+            .listRowSeparator(isNative ? .visible : .hidden)
+            .listRowSeparatorTint(Color.primary.opacity(0.12))
+    }
+}
+
+extension View {
+    func nativeListSeparator() -> some View {
+        modifier(NativeListSeparatorModifier())
+    }
+}
+
 struct SectionHeader: View {
     @AppStorage("beans.uiStyle") private var uiStyleRaw = BeansUIStyle.liquid.rawValue
     let title: String

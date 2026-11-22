@@ -53,7 +53,8 @@ struct PlaylistView: View {
                                     player.play(songs: displayedTracks, startAt: index)
                                 }
                                 .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
+                                .listRowSeparator(isNativeClean ? .visible : .hidden)
+                                .listRowSeparatorTint(Color.primary.opacity(0.12))
                             }
                         }
                     }

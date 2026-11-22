@@ -490,12 +490,13 @@ struct DiscoverView: View {
         if isNativeClean {
             VStack(alignment: .leading, spacing: 18) {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 14) {
+                    HStack(spacing: 16) {
                         dailyHeroCard
                         playlistsHeroCard
                     }
                     .padding(.vertical, 2)
                 }
+                .padding(.trailing, isNativeClean ? -16 : 0)
                 dailySongCards
             }
         } else {
@@ -1023,7 +1024,7 @@ struct QQTopListDetailView: View {
                                     player.play(songs: filteredTracks, startAt: index)
                                 }
                                 .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
+                                .nativeListSeparator()
                             }
                         }
                     }
@@ -1131,7 +1132,7 @@ struct QQPlaylistSongsSheet: View {
                                     player.play(songs: filteredTracks, startAt: index)
                                 }
                                 .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
+                                .nativeListSeparator()
                             }
                         }
                     }
@@ -1211,7 +1212,7 @@ struct DailySongsSheet: View {
                                 player.play(songs: filteredSongs, startAt: index)
                             }
                             .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
+                            .nativeListSeparator()
                         }
                     }
                 }
