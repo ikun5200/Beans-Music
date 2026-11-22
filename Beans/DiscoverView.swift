@@ -95,7 +95,7 @@ struct DiscoverView: View {
             ScrollView {
                 if !homeRenderingPaused {
                     ScrollViewReader { proxy in
-                    VStack(alignment: .leading, spacing: isNativeClean ? 34 : 26) {
+                    VStack(alignment: .leading, spacing: isNativeClean ? 32 : 26) {
                         header
                         if let errorMessage {
                             ErrorStateView(message: errorMessage) {
@@ -124,8 +124,8 @@ struct DiscoverView: View {
                             }
                         }
                     }
-                    .padding(.horizontal, isNativeClean ? 24 : 16)
-                    .padding(.top, isNativeClean ? 32 : 8)
+                    .padding(.horizontal, isNativeClean ? 16 : 16)
+                    .padding(.top, isNativeClean ? 8 : 8)
                     .padding(.bottom, 190)
                     .frame(maxWidth: 860)
                     .frame(maxWidth: .infinity)
@@ -366,7 +366,7 @@ struct DiscoverView: View {
                 .padding(.vertical, 2)
             }
             // 保留首页左侧起始边距，右侧滚动时才延伸到屏幕边缘。
-            .padding(.trailing, isNativeClean ? -24 : 0)
+            .padding(.trailing, isNativeClean ? -16 : 0)
         }
         .id("rankTopSection")
     }
@@ -581,14 +581,14 @@ struct DiscoverView: View {
         VStack(alignment: .leading, spacing: 14) {
             // 横滑歌曲卡：每日推荐前 8 首
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 12) {
+                LazyHStack(spacing: isNativeClean ? 14 : 12) {
                     ForEach(Array(dailySongs.prefix(8).enumerated()), id: \.element.identityKey) { index, song in
                         Button {
                             BeansHaptics.tap()
                             player.play(songs: dailySongs, startAt: index)
                         } label: {
-                            VStack(alignment: .leading, spacing: 6) {
-                                CoverImage(url: song.coverURL, size: isNativeClean ? 156 : 108, cornerRadius: isNativeClean ? 14 : 16)
+                            VStack(alignment: .leading, spacing: isNativeClean ? 8 : 6) {
+                                CoverImage(url: song.coverURL, size: isNativeClean ? 154 : 108, cornerRadius: isNativeClean ? 10 : 16)
                                     .overlay(alignment: .topLeading) {
                                     if showSongVIPBadge, song.isVIP {
                                             Text("VIP")
@@ -604,40 +604,43 @@ struct DiscoverView: View {
                                         dailyPlayStateBadge(for: song)
                                     }
                                 Text(song.name)
-                                    .font(BeansFont.appFont(12, .medium))
-                                .foregroundStyle(Color.beansLabel)
-                                .lineLimit(1)
-                                .font(BeansFont.appFont(isNativeClean ? 15 : 12, isNativeClean ? .bold : .medium))
-                                .frame(width: isNativeClean ? 156 : 108, alignment: .leading)
+                                    .font(isNativeClean
+                                          ? .system(size: 15, weight: .semibold)
+                                          : BeansFont.appFont(12, .medium))
+                                    .foregroundStyle(Color.beansLabel)
+                                    .lineLimit(isNativeClean ? 2 : 1)
+                                    .frame(width: isNativeClean ? 154 : 108, alignment: .leading)
                                 Text(song.artists.isEmpty ? song.album : song.artists)
-                                    .font(BeansFont.appFont(10))
-                                    .foregroundStyle(Color.beansComment)
+                                    .font(isNativeClean ? .system(size: 12) : BeansFont.appFont(10))
+                                    .foregroundStyle(Color.secondary)
                                     .lineLimit(1)
-                                    .frame(width: isNativeClean ? 156 : 108, alignment: .leading)
+                                    .frame(width: isNativeClean ? 154 : 108, alignment: .leading)
                             }
                         }
                         .buttonStyle(GlassPressButtonStyle(scale: 0.94))
                     }
-                    Button {
-                        BeansHaptics.tap()
-                        openRoute(DiscoverRoute.dailySongs(dailySongs))
-                    } label: {
-                        VStack(spacing: 5) {
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 15, weight: .semibold))
-                            Text("查看更多")
-                                .font(BeansFont.appFont(11, .semibold))
+                    if !isNativeClean {
+                        Button {
+                            BeansHaptics.tap()
+                            openRoute(DiscoverRoute.dailySongs(dailySongs))
+                        } label: {
+                            VStack(spacing: 5) {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 15, weight: .semibold))
+                                Text("查看更多")
+                                    .font(BeansFont.appFont(11, .semibold))
+                            }
+                            .foregroundStyle(Color.beansLabel)
+                            .frame(width: 56, height: 84)
+                            .background { BeansGlass(shape: RoundedRectangle(cornerRadius: 14, style: .continuous)) }
                         }
-                        .foregroundStyle(Color.beansLabel)
-                        .frame(width: isNativeClean ? 58 : 56, height: isNativeClean ? 96 : 84)
-                        .background { BeansGlass(shape: RoundedRectangle(cornerRadius: 14, style: .continuous)) }
+                        .buttonStyle(GlassPressButtonStyle(scale: 0.94))
                     }
-                    .buttonStyle(GlassPressButtonStyle(scale: 0.94))
                 }
                 .padding(.vertical, 2)
             }
             // 保留首页左侧起始边距，右侧滚动时才延伸到屏幕边缘。
-            .padding(.trailing, isNativeClean ? -24 : 0)
+            .padding(.trailing, isNativeClean ? -16 : 0)
         }
     }
 
@@ -733,16 +736,16 @@ struct DiscoverView: View {
                             openRoute(DiscoverRoute.playlist(playlist))
                         } label: {
                             VStack(alignment: .leading, spacing: 6) {
-                                CoverImage(url: playlist.coverURL, size: 144, cornerRadius: isNativeClean ? 16 : 18)
+                                CoverImage(url: playlist.coverURL, size: 144, cornerRadius: isNativeClean ? 10 : 18)
                                     .frame(maxWidth: .infinity)
                                 Text(playlist.name)
-                                    .font(isNativeClean ? .system(size: 14, weight: .semibold) : BeansFont.appFont(12, .medium))
+                                    .font(isNativeClean ? .system(size: 15, weight: .semibold) : BeansFont.appFont(12, .medium))
                                     .foregroundStyle(Color.beansLabel)
                                     .lineLimit(2)
                                     .multilineTextAlignment(.leading)
                                 if playlist.trackCount > 0 {
                                     Text(beansSongCountText(playlist.trackCount))
-                                        .font(.system(size: 11, weight: .medium))
+                                        .font(.system(size: 12))
                                         .foregroundStyle(Color.secondary)
                                         .lineLimit(1)
                                 }
