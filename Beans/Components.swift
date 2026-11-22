@@ -673,7 +673,7 @@ struct SectionHeader: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(LocalizedStringKey(title))
-                .font(BeansFont.appFont(isNativeClean ? 26 : 21, .bold))
+                .font(BeansFont.appFont(isNativeClean ? 22 : 21, .bold))
                 .foregroundStyle(titleColor)
             Spacer()
             if let trailing {
