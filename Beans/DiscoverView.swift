@@ -489,7 +489,13 @@ struct DiscoverView: View {
     private var dailySection: some View {
         if isNativeClean {
             VStack(alignment: .leading, spacing: 18) {
-                dailyHeroCard
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 14) {
+                        dailyHeroCard
+                        playlistsHeroCard
+                    }
+                    .padding(.vertical, 2)
+                }
                 dailySongCards
             }
         } else {
@@ -510,7 +516,7 @@ struct DiscoverView: View {
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ))
-                    .frame(height: 178)
+                    .frame(width: 300, height: 178)
                 Image(systemName: "calendar.badge.clock")
                     .font(.system(size: 62, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.20))
@@ -526,6 +532,45 @@ struct DiscoverView: View {
                 }
                 .padding(20)
             }
+            .frame(width: 300, height: 178)
+            .clipShape(RoundedRectangle(cornerRadius: MeloDesign.cardRadius, style: .continuous))
+            .shadow(color: .black.opacity(0.12), radius: 14, y: 8)
+        }
+        .buttonStyle(GlassPressButtonStyle(scale: 0.985))
+    }
+
+    /// MeloX 首页第二张渐变卡：热门歌单
+    private var playlistsHeroCard: some View {
+        Button {
+            BeansHaptics.tap()
+            if let first = personalized.first {
+                openRoute(DiscoverRoute.playlist(first))
+            }
+        } label: {
+            ZStack(alignment: .bottomLeading) {
+                RoundedRectangle(cornerRadius: MeloDesign.cardRadius, style: .continuous)
+                    .fill(LinearGradient(
+                        colors: [Color(red: 0.55, green: 0.32, blue: 0.92), Color(red: 0.32, green: 0.16, blue: 0.62)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                    .frame(width: 300, height: 178)
+                Image(systemName: "square.stack")
+                    .font(.system(size: 62, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.20))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .padding(20)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("热门歌单")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text("发现最近大家都在听")
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.78))
+                }
+                .padding(20)
+            }
+            .frame(width: 300, height: 178)
             .clipShape(RoundedRectangle(cornerRadius: MeloDesign.cardRadius, style: .continuous))
             .shadow(color: .black.opacity(0.12), radius: 14, y: 8)
         }
