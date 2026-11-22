@@ -119,7 +119,6 @@ struct PlayerView: View {
     @AppStorage("beans.appleMusic.syncWallpaper") private var appleSyncWallpaper = false
     @AppStorage("beans.appleMusic.wallpaperBlur") private var appleWallpaperBlur = 14.0
     @AppStorage("beans.showSongVIPBadge") private var showSongVIPBadge = true
-    @AppStorage("beans.appleMusic.showLyricPreview") private var appleShowLyricPreview = true
     /// 侧边滑动手势当前位移（刷视频式切歌过渡）
     @State private var swipeOffset: CGFloat = 0
     @State private var coverDrag: CGSize = .zero
@@ -399,6 +398,9 @@ struct PlayerView: View {
                         },
                         onPlayerSettings: {
                             openPlayerSettings()
+                        },
+                        onDismiss: {
+                            isPresented = false
                         }
                     )
 
@@ -2765,7 +2767,6 @@ struct PlayerView: View {
         appleAccentHex = ""
         appleVolumeHex = ""
         appleShowVolume = false
-        appleShowLyricPreview = true
         appleSyncWallpaper = false
         appleWallpaperBlur = 14
     }
@@ -3720,7 +3721,6 @@ struct PlayerSettingsSheet: View {
     @AppStorage("beans.albumTextGlow") private var albumTextGlow = false
     @AppStorage("beans.albumTextGlowIntensity") private var albumTextGlowIntensity = 1.0
     @AppStorage("beans.coverPlayerStyle") private var coverPlayerStyleRaw = BeansCoverPlayerStyle.appleMusic.rawValue
-    @AppStorage("beans.appleMusic.showLyricPreview") private var appleShowLyricPreview = true
     @Environment(\.dismiss) private var dismiss
     @AppStorage("beans.playerSettings.playbackExpanded") private var playbackExpanded = false
     @AppStorage("beans.playerSettings.lyricDisplayExpanded") private var lyricDisplayExpanded = false
@@ -4275,9 +4275,6 @@ struct PlayerSettingsSheet: View {
 
     private var appleMusicCard: some View {
         settingCard("Apple Music 样式", isExpanded: $appleMusicExpanded) {
-            Toggle("显示封面页歌词预览", isOn: $appleShowLyricPreview)
-                .font(BeansFont.appFont(13, .medium))
-                .tint(Color.beansAmber)
             Button {
                 coverPlayerStyleRaw = BeansCoverPlayerStyle.appleMusic.rawValue
                 playerButtonStyleRaw = BeansPlayerButtonStyle.appleMusic.rawValue
