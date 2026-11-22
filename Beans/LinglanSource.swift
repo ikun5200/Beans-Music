@@ -78,7 +78,9 @@ final class LinglanSource: ObservableObject {
     /// 优先使用聆澜解析 QQ 歌曲播放地址；失败返回 nil（由调用方回退 QQ 官方）。
     func resolve(songID: Int, quality: ThirdPartyAudioQuality) async -> UnblockService.Resolved? {
         guard canResolve else { return nil }
-        for candidate in qualityChain(for: quality) {
+        // 最多尝试两档音质：首档失败后请求次档，仍失败则交给 QQ 官方兜底，
+        // 避免每首歌在播放前等待过多轮网络请求。
+        for candidate in qualityChain(for: quality).prefix(2) {
             if let url = await requestPlayURL(songID: songID, quality: candidate) {
                 return UnblockService.Resolved(
                     url: url,
