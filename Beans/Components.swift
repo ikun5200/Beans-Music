@@ -261,11 +261,6 @@ struct GlassCard<Content: View>: View {
         return 16
     }
 
-    @available(iOS 26.0, *)
-    private var glassVariant: Glass {
-        guard controlSurface else { return .clear }
-        return interactive ? .regular.interactive() : .regular
-    }
 
     var body: some View {
         if isLiquid {
