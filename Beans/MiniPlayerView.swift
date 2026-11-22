@@ -77,7 +77,7 @@ struct MiniPlayerView: View {
                         .foregroundStyle(Color.beansComment)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .animation(.easeInOut(duration: 0.25), value: currentLyricLine?.text)
+                        .animation(.beansSmooth, value: currentLyricLine?.text)
                 }
                 Spacer(minLength: 8)
                 Button {
@@ -163,9 +163,7 @@ struct MiniPlayerView: View {
         guard let song = player.currentSong else { return }
         let identity = song.identityKey
         var raw: String?
-        if song.source == .kugou, let hash = song.kugouHash {
-            raw = await KugouMusicAPI.shared.lyric(hash: hash, duration: song.duration)
-        } else if song.source == .qq, let mid = song.qqMid {
+        if let mid = song.qqMid {
             raw = try? await QQMusicAPI.shared.lyric(songmid: mid)
         }
         guard let raw else { return }

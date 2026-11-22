@@ -38,7 +38,7 @@ struct OnboardingView: View {
                     disclaimerPage.tag(3)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeInOut(duration: 0.3), value: page)
+                .animation(.beansSmooth, value: page)
 
                 // 底部控制区
                 bottomBar
@@ -77,7 +77,7 @@ struct OnboardingView: View {
             if page < totalPages - 1 {
                 // 下一步 / 跳过介绍
                 Button {
-                    withAnimation(.easeInOut(duration: 0.3)) { page += 1 }
+                    withAnimation(.beansSmooth) { page += 1 }
                 } label: {
                     Text(nextText)
                         .font(BeansFont.appFont(16, .bold))
@@ -92,7 +92,7 @@ struct OnboardingView: View {
                 }
 
                 Button {
-                    withAnimation(.easeInOut(duration: 0.3)) { page = totalPages - 1 }
+                    withAnimation(.beansSmooth) { page = totalPages - 1 }
                 } label: {
                     Text(skipText)
                         .font(BeansFont.appFont(13))
@@ -119,7 +119,7 @@ struct OnboardingView: View {
                             .textInputAutocapitalization(.never)
                         if typed != confirmText {
                             Button {
-                                withAnimation(.easeOut(duration: 0.2)) { typed = confirmText }
+                                withAnimation(.beansSnappy) { typed = confirmText }
                             } label: {
                                 Text(isEnglish ? "Fill" : "一键填入")
                                     .font(BeansFont.appFont(12, .semibold))
@@ -163,7 +163,7 @@ struct OnboardingView: View {
                         .beansCardShadow(radius: 10, y: 4)
                 }
                 .disabled(typed != confirmText)
-                .animation(.easeOut(duration: 0.2), value: typed == confirmText)
+                .animation(.beansSnappy, value: typed == confirmText)
             }
         }
     }
@@ -186,7 +186,7 @@ struct OnboardingView: View {
                 .font(BeansFont.appFont(30, .bold))
                 .foregroundStyle(Color.beansLabel)
 
-            Text(isEnglish ? "Native Liquid Glass on iOS 26 · QQ Music / Kugou\nPure SwiftUI · Fully open source" : "iOS 26 原生液态玻璃 · 聚合 QQ / 酷狗\n纯 SwiftUI · 完全开源")
+            Text(isEnglish ? "Native Liquid Glass on iOS 26 · QQ Music\nPure SwiftUI · Fully open source" : "iOS 26 原生液态玻璃 · QQ 音乐\n纯 SwiftUI · 完全开源")
                 .font(BeansFont.appFont(15))
                 .foregroundStyle(Color.beansSecondary)
                 .multilineTextAlignment(.center)
@@ -279,11 +279,11 @@ struct OnboardingView: View {
                 .font(.system(size: 40))
                 .foregroundStyle(LinearGradient.beansAccent)
 
-            Text(isEnglish ? "Two platforms, one app for all your music" : "双平台聚合，一个 App 全听遍")
+            Text(isEnglish ? "One platform, every song you love" : "一个平台，听遍好音乐")
                 .font(BeansFont.appFont(26, .bold))
                 .foregroundStyle(Color.beansLabel)
 
-            Text(isEnglish ? "Sync playlists from QQ Music, and Kugou" : "QQ 音乐 + 酷狗歌单同步")
+            Text(isEnglish ? "Sync playlists from QQ Music" : "QQ 音乐歌单同步")
                 .font(BeansFont.appFont(14))
                 .foregroundStyle(Color.beansSecondary)
 
@@ -291,9 +291,6 @@ struct OnboardingView: View {
                 platformRow(imageName: "BrandQQ", tint: Color(red: 0.13, green: 0.51, blue: 0.95),
                             title: isEnglish ? "QQ Music" : "QQ 音乐",
                             detail: isEnglish ? "Scan, sign in on the web, or use a Cookie to sync playlists and VIP status" : "扫码 / 网页 / Cookie 登录，同步歌单与 VIP")
-                platformRow(imageName: "BrandKugou", tint: Color(red: 0.12, green: 0.55, blue: 1.0),
-                            title: isEnglish ? "Kugou Music" : "酷狗音乐",
-                            detail: isEnglish ? "Sign in to sync cloud playlists and search Kugou songs" : "登录同步云端歌单，并支持酷狗歌曲搜索")
             }
             .padding(.horizontal, 28)
 

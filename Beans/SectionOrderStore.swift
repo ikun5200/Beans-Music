@@ -42,7 +42,6 @@ struct SectionOrderSheet: View {
     /// 全部可用板块名（用于补全新板块）
     let sections: [String]
     @Binding var order: [String]
-    var platformOrder: Binding<[String]>? = nil
     @EnvironmentObject private var theme: ThemeStore
     @Environment(\.dismiss) private var dismiss
 
@@ -87,26 +86,6 @@ struct SectionOrderSheet: View {
                         }
                     }
                 }
-
-                if let platformOrder {
-                    Section("平台同步歌单顺序（所有界面同步）") {
-                        ForEach(platformOrder.wrappedValue, id: \.self) { rawValue in
-                            HStack(spacing: 12) {
-                                Image(systemName: "line.3.horizontal")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(Color.beansComment.opacity(0.55))
-                                Text(LocalizedStringKey(rawValue))
-                                    .font(BeansFont.appFont(15))
-                                    .foregroundStyle(Color.beansLabel)
-                            }
-                            .padding(.vertical, 4)
-                            .listRowBackground(Color.clear)
-                        }
-                        .onMove { from, to in
-                            PlatformPreferenceStore.shared.moveProviders(from: from, to: to)
-                        }
-                    }
-                }
             }
             .environment(\.editMode, .constant(.active))
             .listStyle(.plain)
@@ -121,10 +100,6 @@ struct SectionOrderSheet: View {
                     Button("恢复默认") {
                         withAnimation(.default) {
                             order = sections
-                            if let platformOrder {
-                                PlatformPreferenceStore.shared.resetOrder()
-                                platformOrder.wrappedValue = SearchProvider.allCases.map(\.rawValue)
-                            }
                         }
                     }
                 }

@@ -233,11 +233,7 @@ struct ArtistHomeSheet: View {
     private func load() async {
         loading = true
         errorMessage = nil
-        if artistSource == .qq {
-            await loadQQArtist()
-        } else {
-            await loadKugouArtist()
-        }
+        await loadQQArtist()
     }
 
     /// QQ 歌手：优先用歌手 mid 拉热门歌曲，失败则按歌手名搜索 QQ 歌曲
@@ -265,85 +261,4 @@ struct ArtistHomeSheet: View {
         loading = false
     }
 
-    /// 酷狗歌手主页优先走作者歌曲接口，再补 `singer/song` 和综合搜索结果，
-    /// 避免部分歌手页只停在首批 19 首。
-    private func loadKugouArtist() async {
-        let resolvedArtist: Artist?
-        if let artistID,
-           !artistID.isEmpty,
-           !artistID.hasPrefix("qq-") {
-            let rawID = artistID.replacingOccurrences(of: "kugou-", with: "")
-            resolvedArtist = artist ?? Artist(id: rawID, name: artistName, coverURL: nil, source: .kugou)
-        } else {
-            resolvedArtist = (try? await KugouMusicAPI.shared.searchArtists(keyword: artistName, limit: 10))?.first
-        }
-        if let resolvedArtist {
-            artist = resolvedArtist
-        }
-        var songs: [Song] = []
-        var primarySongs: [Song] = []
-        if let resolvedArtist,
-           !resolvedArtist.id.isEmpty,
-           !resolvedArtist.id.hasPrefix("qq-") {
-            var seen = Set<String>()
-            let pageSize = 100
-            let maxSongs = 1_000
-            for page in 1...(maxSongs / pageSize) {
-                let batch = (try? await KugouMusicAPI.shared.artistSongs(
-                    authorID: resolvedArtist.id,
-                    page: page,
-                    limit: pageSize
-                )) ?? []
-                if batch.isEmpty { break }
-                let before = songs.count
-                for song in batch where seen.insert(song.identityKey).inserted {
-                    songs.append(song)
-                    primarySongs.append(song)
-                    if songs.count >= maxSongs { break }
-                }
-                if songs.count >= maxSongs || songs.count == before {
-                    break
-                }
-            }
-        }
-
-        // The author endpoint has historically returned only 19 rows for some
-        // accounts/charts. Supplement a short result with paged song search.
-        if songs.count < 100 {
-            async let exact = KugouMusicAPI.shared.searchSongs(keyword: artistName, limit: 300)
-            async let works = KugouMusicAPI.shared.searchSongs(keyword: "\(artistName) 歌曲", limit: 300)
-            let candidates = [
-                (try? await exact) ?? [],
-                (try? await works) ?? [],
-            ]
-            var seen = Set(songs.map(\.identityKey))
-            for song in candidates.flatMap({ $0 }) {
-                guard seen.insert(song.identityKey).inserted else { continue }
-                songs.append(song)
-            }
-        }
-
-        if songs.isEmpty {
-            async let exact = KugouMusicAPI.shared.searchSongs(keyword: artistName, limit: 300)
-            async let hot = KugouMusicAPI.shared.searchSongs(keyword: "\(artistName) 热门", limit: 200)
-            async let works = KugouMusicAPI.shared.searchSongs(keyword: "\(artistName) 歌曲", limit: 200)
-            let batches = [
-                (try? await exact) ?? [],
-                (try? await hot) ?? [],
-                (try? await works) ?? [],
-            ]
-            var seen = Set<String>()
-            songs = batches.flatMap { $0 }.filter { song in
-                seen.insert(song.identityKey).inserted
-            }
-        }
-
-        hotSongs = songs
-        if hotSongs.isEmpty, !primarySongs.isEmpty {
-            hotSongs = primarySongs
-        }
-        hotSongs = Array(hotSongs.prefix(1_000))
-        BeansLogger.shared.log("酷狗歌手主页完成：artist=\(artistName) songs=\(hotSongs.count)", level: .debug)
-        loading = false
-    }
 }

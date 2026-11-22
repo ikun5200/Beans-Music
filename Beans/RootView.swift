@@ -32,7 +32,6 @@ struct RootView: View {
     @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var favorites: FavoritesStore
     @Environment(\.colorScheme) private var colorScheme
-    @ObservedObject private var platformPrefs = PlatformPreferenceStore.shared
     @AppStorage("beans.themeMode") private var themeModeRaw = BeansThemeMode.system.rawValue
 
     @State private var selection: RootTab = .discover
@@ -41,7 +40,6 @@ struct RootView: View {
     @AppStorage("beans.disclaimerAccepted") private var disclaimerAccepted = false
     /// 底栏是否显示文字（关闭后只显示图标）
     @AppStorage("beans.tabLabelsVisible") private var tabLabelsVisible = true
-    @AppStorage("beans.homeSource") private var homeSourceRaw = SearchProvider.qq.rawValue
     /// 强制高刷新率：用于修复部分页面被系统稳定在 60Hz 的问题。
     @AppStorage("beans.enableHighRefresh") private var enableHighRefresh = true
     @AppStorage("beans.legacyTabCornerRadius") private var legacyTabCornerRadius = 32.0
@@ -58,7 +56,6 @@ struct RootView: View {
     @State private var updateShareFileURL: URL?
     @State private var updateDownloadError = ""
     @State private var showUpdateDownloadError = false
-    @State private var showHomePlatformMenu = false
     private var themeMode: BeansThemeMode {
         BeansThemeMode(rawValue: themeModeRaw) ?? .system
     }
@@ -100,8 +97,7 @@ struct RootView: View {
         .tint(Color.beansAmber)
         .background {
             TabBarAppearanceConfigurator(
-                hidesSystemTabBarOnLegacy: !usesSystemFloatingTabBar,
-                onHomeLongPress: { showHomePlatformMenu = true }
+                hidesSystemTabBarOnLegacy: !usesSystemFloatingTabBar
             )
         }
 
@@ -132,9 +128,6 @@ struct RootView: View {
                 .allowsHitTesting(false)
         }
         .preferredColorScheme(themeMode.colorScheme)
-        .confirmationDialog("主页平台", isPresented: $showHomePlatformMenu, titleVisibility: .visible) {
-            platformSelectionMenu
-        }
         .fullScreenCover(isPresented: $showPlayer) {
             if #available(iOS 18.0, *) {
                 playerPresentation
@@ -151,7 +144,7 @@ struct RootView: View {
             }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.86), value: player.currentSong?.id)
-        .animation(.easeInOut(duration: 0.22), value: selection)
+        .animation(.beansSmooth, value: selection)
         .overlay(alignment: .bottom) {
             ToastView(center: ToastCenter.shared)
         }
@@ -312,8 +305,7 @@ struct RootView: View {
                 },
                 selection: $selection,
                 labelsVisible: tabLabelsVisible,
-                accentIsNativeClean: isNativeClean,
-                onHomeLongPress: { showHomePlatformMenu = true }
+                accentIsNativeClean: isNativeClean
             ) { tab in
                 guard selection != tab else { return }
                 BeansHaptics.select()
@@ -326,20 +318,6 @@ struct RootView: View {
         .padding(.horizontal, 18)
         .padding(.bottom, 12)
         .offset(x: CGFloat(legacyTabOffsetX), y: CGFloat(legacyTabOffsetY))
-    }
-
-    @ViewBuilder
-    private var platformSelectionMenu: some View {
-        let current = SearchProvider(rawValue: homeSourceRaw) ?? platformPrefs.enabledSearchProviders.first ?? .qq
-        Text("主页平台")
-        ForEach(platformPrefs.enabledSearchProviders) { provider in
-            Button {
-                BeansHaptics.select()
-                homeSourceRaw = provider.rawValue
-            } label: {
-                Label(LocalizedStringKey(provider.rawValue), systemImage: provider == current ? "checkmark" : provider.icon)
-            }
-        }
     }
 
     @ViewBuilder
@@ -458,43 +436,6 @@ struct BeansNowPlayingPresentation<Content: View>: View {
     }
 }
 
-struct PlatformPickerSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    let current: SearchProvider
-    let providers: [SearchProvider]
-    let onSelect: (SearchProvider) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("选择主页平台")
-                .font(BeansFont.appFont(19, .bold))
-                .foregroundStyle(Color.beansLabel)
-            ForEach(providers) { provider in
-                Button {
-                    onSelect(provider)
-                    dismiss()
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: provider == current ? "checkmark.circle.fill" : provider.icon)
-                            .foregroundStyle(provider == current ? Color.beansAmber : Color.beansComment)
-                        Text(LocalizedStringKey(provider.rawValue))
-                            .font(BeansFont.appFont(15, .medium))
-                            .foregroundStyle(Color.beansLabel)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background { BeansGlass(shape: RoundedRectangle(cornerRadius: 14, style: .continuous)) }
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(20)
-        .background(Color.clear)
-        .modifier(PlatformPickerPresentation(providersCount: providers.count))
-    }
-}
-
 private struct ClearSheetBackground: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
@@ -545,7 +486,6 @@ private struct KumoneGlassTabBar: View {
     @Binding var selection: RootTab
     var labelsVisible: Bool
     var accentIsNativeClean: Bool
-    var onHomeLongPress: (() -> Void)?
     var onSelect: (RootTab) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
@@ -610,11 +550,6 @@ private struct KumoneGlassTabBar: View {
                          : AnyShapeStyle(Color.primary.opacity(0.8)))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
-        .simultaneousGesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in
-            guard item.tab == .discover else { return }
-            BeansHaptics.select()
-            onHomeLongPress?()
-        })
     }
 
     private var selectionPill: some View {
@@ -649,22 +584,6 @@ private struct KumoneGlassTabBar: View {
                 }
                 isDragging = false
             }
-    }
-}
-
-private struct PlatformPickerPresentation: ViewModifier {
-    let providersCount: Int
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if #available(iOS 16.0, *) {
-            content
-                .modifier(ClearSheetBackground())
-                .presentationDetents([.height(CGFloat(116 + providersCount * 60))])
-                .presentationDragIndicator(.visible)
-        } else {
-            content
-        }
     }
 }
 
@@ -787,10 +706,9 @@ private struct UpdatePromptOverlay: View {
 
 struct TabBarAppearanceConfigurator: UIViewControllerRepresentable {
     var hidesSystemTabBarOnLegacy = true
-    var onHomeLongPress: (() -> Void)?
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onHomeLongPress: onHomeLongPress)
+        Coordinator()
     }
 
     func makeUIViewController(context: Context) -> UIViewController {
@@ -809,7 +727,6 @@ struct TabBarAppearanceConfigurator: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        context.coordinator.onHomeLongPress = onHomeLongPress
         DispatchQueue.main.async {
             Self.apply(
                 from: uiViewController,
@@ -871,17 +788,6 @@ struct TabBarAppearanceConfigurator: UIViewControllerRepresentable {
 
     final class Coordinator: NSObject {
         static let gestureName = "beans.homePlatformLongPress"
-        var onHomeLongPress: (() -> Void)?
-
-        init(onHomeLongPress: (() -> Void)?) {
-            self.onHomeLongPress = onHomeLongPress
-        }
-
-        @objc func handleHomeLongPress(_ gesture: UILongPressGestureRecognizer) {
-            guard gesture.state == .began else { return }
-            BeansHaptics.select()
-            onHomeLongPress?()
-        }
     }
 }
 

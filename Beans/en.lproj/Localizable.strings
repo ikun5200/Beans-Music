@@ -207,9 +207,7 @@
 "第三方音源准备 QQ CDN 备用节点：\\(rawURL.host ?? " = "Log entry";
 "点击顶部中间正在播放的标题，可打开更多设置" = "Tap the centered Now Playing title at the top to open more settings.";
 "点击封面区域返回歌曲页面" = "Tap the cover area to return to the song page";
-"点击收起赞助信息" = "Tap to collapse sponsor info";
 "点击跳转 Telegram" = "Open Telegram";
-"点击展开赞助信息" = "Tap to view sponsor info";
 "点击左上角封面返回专辑视图" = "Tap the top-left cover to return to album view";
 "电脑浏览器打开 https://y.qq.com 登录 QQ 后，按 F12 → Network → 刷新页面，点任意请求，复制 Request Headers 里的整段 Cookie 粘贴到下方" = "Log message";
 "电子" = "Electronic";
@@ -355,7 +353,6 @@
 "渐变起始色" = "Gradient Start Color";
 "渐变起始颜色" = "Gradient Start Color";
 "渐变预设" = "Gradient";
-"交流群" = "Community Group";
 "较高" = "High";
 "接下来 (\\(player.queue.count) 首)" = "(\\(player.queue.count) )";
 "解析播放地址失败" = "Failed to Resolve Playback URL";
@@ -477,7 +474,6 @@
 "请求地址无效" = "Please";
 "请使用酷狗音乐 App 扫码" = "App";
 "请使用酷狗音乐 App 扫码。登录成功后会保存移动端 token、设备 mid 和 dfid，用于同步云端歌单。" = "Log message";
-"请使用微信扫描上方二维码完成赞助。" = "Scan the QR code above with WeChat to sponsor.";
 "请输入：\\(confirmText)" = "Log entry";
 "请输入歌单名称" = "Enter a playlist name";
 "请先登录 QQ 音乐后再创建歌单" = "Sign in to QQ Music before creating a playlist";
@@ -519,7 +515,6 @@
 "三平台喜欢" = "Three-platform Likes";
 "扫码 / 网页 / Cookie 登录，同步歌单与 VIP" = "Scan, web, or Cookie login to sync playlists and VIP status";
 "扫码 / 网页登录，同步歌单、收藏、听歌排行、VIP" = "Scan or use web login to sync playlists, favorites, listening history, and VIP status";
-"扫码加入交流群" = "Scan to join the community";
 "删除" = "Delete";
 "删除歌单" = "Delete Playlist";
 "删除失败，请确认已登录 QQ 音乐" = "Delete failed. Please make sure you are signed in to QQ Music.";
@@ -777,7 +772,6 @@
 "暂无评论" = "No Comments";
 "暂无日志" = "No Logs";
 "暂无专辑" = "No album";
-"赞助人员" = "Sponsors";
 "早上好" = "Good morning";
 "粘贴Cookie" = "Paste Cookie";
 "展开全部（\\(min(visibleRankCount, 10))）" = "Expand All (\\(min(visibleRankCount, 10)))";
@@ -855,7 +849,6 @@
 "自定义时长" = "Custom";
 "自动" = "Automatic";
 "自动问候" = "Automatic Greeting";
-"自愿赞助" = "Voluntary Sponsorship";
 "最近播放" = "Recently Played";
 "最近播放 \\(player.history.count) 首" = "\\(player.history.count)";
 "最新评论" = "Comments";

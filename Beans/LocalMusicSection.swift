@@ -3,13 +3,6 @@ import SwiftUI
 // MARK: - 本地音乐库区块（音乐库页面顶部：本机歌单，可新建 / 播放 / 添加歌曲）
 
 struct LocalMusicSection: View {
-    fileprivate enum SyncTarget: String, CaseIterable, Identifiable {
-        case qq = "QQ音乐"
-        case kugou = "酷狗音乐"
-
-        var id: String { rawValue }
-    }
-
     @ObservedObject private var store = LocalLibraryStore.shared
     @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var favorites: FavoritesStore
@@ -22,8 +15,6 @@ struct LocalMusicSection: View {
     @State private var selected: LocalPlaylist?
     @State private var syncing = false
     @State private var syncMessage = ""
-    @State private var showSyncPicker = false
-    @State private var selectedSyncTargets: Set<SyncTarget> = []
 
     private var emptyLocalPlaylistText: String {
         if languageRaw == AppLanguage.english.rawValue {
@@ -63,14 +54,14 @@ struct LocalMusicSection: View {
             }
             VStack(alignment: .leading, spacing: 6) {
                 GlassButton(
-                    title: syncing ? "正在同步歌单…" : "一键同步歌单",
+                    title: syncing ? "正在同步歌单…" : "同步 QQ 喜欢歌曲",
                     systemName: "arrow.triangle.2.circlepath",
                     prominent: true
                 ) {
-                    showSyncPicker = true
+                    Task { await syncQQFavorites() }
                 }
                 .disabled(syncing)
-                Text("选择两个或三个平台，合并同步到一个本地歌单")
+                Text("把 QQ 音乐「我的喜欢」同步到一个本地歌单")
                     .font(BeansFont.appFont(11))
                     .foregroundStyle(Color.beansComment)
             }
@@ -159,19 +150,6 @@ struct LocalMusicSection: View {
         } message: {
             Text("本地歌单保存在设备上，覆盖安装不会丢失，不依赖平台账号")
         }
-        .sheet(isPresented: $showSyncPicker) {
-            SyncPlatformPicker(
-                selectedTargets: $selectedSyncTargets,
-                onCancel: {
-                    showSyncPicker = false
-                },
-                onConfirm: {
-                    let targets = selectedSyncTargets
-                    showSyncPicker = false
-                    Task { await sync(targets: targets) }
-                }
-            )
-        }
         .sheet(isPresented: $showPlaylistOrder) {
             LocalPlaylistOrderSheet()
                 .environmentObject(theme)
@@ -182,58 +160,28 @@ struct LocalMusicSection: View {
         }
     }
 
-    private func sync(targets: Set<SyncTarget>) async {
+    private func syncQQFavorites() async {
         guard !syncing else { return }
-        guard targets.count >= 2 else {
-            ToastCenter.shared.show("至少选择两个平台")
-            return
-        }
         syncing = true
         syncMessage = ""
         var songs: [Song] = []
         var details: [String] = []
-        if targets.contains(.qq), QQMusicAuth.shared.isLoggedIn {
+        if QQMusicAuth.shared.isLoggedIn {
             do {
                 let qqSongs = try await QQMusicAPI.shared.favoriteSongs(limit: 0)
                 songs.append(contentsOf: qqSongs)
                 details.append(platformSongCount("QQ音乐", qqSongs.count))
             } catch {
-                BeansLogger.shared.log("三平台同步：QQ音乐失败 \(error.localizedDescription)", level: .error)
+                BeansLogger.shared.log("同步：QQ音乐失败 \(error.localizedDescription)", level: .error)
                 details.append(NSLocalizedString("QQ音乐请求失败", comment: ""))
             }
-        } else if targets.contains(.qq) {
+        } else {
             details.append(NSLocalizedString("QQ音乐未登录", comment: ""))
-        }
-        if targets.contains(.kugou), KugouMusicAuth.shared.isLoggedIn {
-            do {
-                let lists = try await KugouMusicAPI.shared.userPlaylists()
-                BeansLogger.shared.log("三平台同步：酷狗歌单 \(lists.map(\.name).joined(separator: "|"))", level: .info)
-                let liked = lists.first { list in
-                    let name = list.name.replacingOccurrences(of: " ", with: "")
-                    return name.contains("喜欢") || name.contains("收藏") || name.contains("红心")
-                }
-                if let liked {
-                    let kugouSongs = try await KugouMusicAPI.shared.playlistSongs(listID: liked.id)
-                    songs.append(contentsOf: kugouSongs)
-                    details.append(platformSongCount("酷狗音乐", kugouSongs.count))
-                } else {
-                    details.append(NSLocalizedString("酷狗音乐未找到喜欢歌单", comment: ""))
-                }
-            } catch {
-                BeansLogger.shared.log("三平台同步：酷狗音乐失败 \(error.localizedDescription)", level: .error)
-                details.append(NSLocalizedString("酷狗音乐请求失败", comment: ""))
-            }
-        } else if targets.contains(.kugou) {
-            details.append(NSLocalizedString("酷狗音乐未登录", comment: ""))
         }
         var unique: [Song] = []
         var seen = Set<String>()
         for song in songs where seen.insert(song.identityKey).inserted { unique.append(song) }
-        let playlistName: String
-        playlistName = targets
-            .sorted { $0.rawValue < $1.rawValue }
-            .map(\.rawValue)
-            .joined(separator: " + ") + "喜欢"
+        let playlistName = "QQ音乐喜欢"
         let added = store.syncSongs(unique, intoPlaylistNamed: playlistName)
         syncing = false
         syncMessage = details.joined(separator: NSLocalizedString("，", comment: "")) + String(format: NSLocalizedString("；合计 %d 首", comment: ""), unique.count)
@@ -279,64 +227,6 @@ private struct LocalPlaylistOrderSheet: View {
                     Button("完成") { dismiss() }
                 }
             }
-        }
-    }
-}
-
-fileprivate struct SyncPlatformPicker: View {
-    @Binding var selectedTargets: Set<LocalMusicSection.SyncTarget>
-    let onCancel: () -> Void
-    let onConfirm: () -> Void
-
-    private var canConfirm: Bool {
-        selectedTargets.count >= 2
-    }
-
-    var body: some View {
-        BeansNavigationStack {
-            List {
-                Section {
-                    ForEach(LocalMusicSection.SyncTarget.allCases) { target in
-                        Toggle(isOn: Binding(
-                            get: { selectedTargets.contains(target) },
-                            set: { isSelected in
-                                if isSelected {
-                                    selectedTargets.insert(target)
-                                } else {
-                                    selectedTargets.remove(target)
-                                }
-                            }
-                        )) {
-                            Label(target.rawValue, systemImage: icon(for: target))
-                        }
-                    }
-                } header: {
-                    Text("同步平台")
-                } footer: {
-                    Text(LocalizedStringKey(canConfirm ? "所选平台的喜欢歌曲会合并到同一个本地歌单。" : "至少选择两个平台。"))
-                }
-            }
-            .navigationTitle("一键同步歌单")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("取消", action: onCancel)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("开始同步", action: onConfirm)
-                        .disabled(!canConfirm)
-                }
-            }
-        }
-        .onAppear {
-            selectedTargets = []
-        }
-    }
-
-    private func icon(for target: LocalMusicSection.SyncTarget) -> String {
-        switch target {
-        case .qq: return "q.circle"
-        case .kugou: return "dog"
         }
     }
 }
@@ -574,11 +464,10 @@ struct LocalPlaylistDetailSheet: View {
     }
 }
 
-// MARK: - 本地歌单搜索添加（QQ音乐 / 酷狗音乐）
+// MARK: - 本地歌单搜索添加（QQ音乐）
 
 struct LocalSearchAddSheet: View {
     @ObservedObject private var store = LocalLibraryStore.shared
-    @ObservedObject private var platformPrefs = PlatformPreferenceStore.shared
     @EnvironmentObject private var player: PlayerManager
     @Environment(\.dismiss) private var dismiss
 
@@ -586,8 +475,6 @@ struct LocalSearchAddSheet: View {
     @State private var keyword = ""
     @State private var results: [Song] = []
     @State private var searching = false
-    @State private var provider: SearchProvider = .qq
-    private var searchProviders: [SearchProvider] { platformPrefs.enabledSearchProviders }
     @State private var task: Task<Void, Never>?
 
     var body: some View {
@@ -612,13 +499,6 @@ struct LocalSearchAddSheet: View {
                     }
                 }
                 .padding(12)
-                Picker("平台", selection: $provider) {
-                    ForEach(searchProviders) { p in
-                        Text(LocalizedStringKey(p.rawValue)).tag(p)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 12)
                 if searching {
                     Spacer()
                     ProgressView().tint(Color.beansAmber)
@@ -653,13 +533,6 @@ struct LocalSearchAddSheet: View {
             }
         }
         .modifier(BeansSheetModifier(detents: [.medium, .large], dragIndicator: true))
-        .onAppear {
-            provider = platformPrefs.ensureVisible(provider)
-        }
-        .onReceive(platformPrefs.changes) { _ in
-            let next = platformPrefs.ensureVisible(provider)
-            if next != provider { provider = next }
-        }
     }
 
     private func runSearch() {
@@ -670,13 +543,7 @@ struct LocalSearchAddSheet: View {
             searching = true
             defer { if !Task.isCancelled { searching = false } }
             do {
-                let songs: [Song]
-                switch provider {
-                case .qq:
-                    songs = try await QQMusicAPI.shared.searchSongs(keyword: trimmed)
-                case .kugou:
-                    songs = try await KugouMusicAPI.shared.searchSongs(keyword: trimmed)
-                }
+                let songs: [Song] = try await QQMusicAPI.shared.searchSongs(keyword: trimmed)
                 guard !Task.isCancelled else { return }
                 results = songs
             } catch {

@@ -77,7 +77,7 @@ struct ReferencePlaybackView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .animation(.easeInOut(duration: 0.22), value: showLyrics)
+                    .animation(.beansSmooth, value: showLyrics)
 
                     playbackControls(bottomInset: geometry.safeAreaInsets.bottom)
                 }
@@ -542,7 +542,7 @@ struct ReferencePlaybackView: View {
         guard let id = currentPlaybackLyricID else { return }
         let action = { proxy.scrollTo(id, anchor: .center) }
         if animated {
-            withAnimation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.38)) { action() }
+            withAnimation(.beansSnappy) { action() }
         } else {
             action()
         }

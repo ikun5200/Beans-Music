@@ -388,7 +388,6 @@ enum ThirdPartySourceImportParser {
         let platform = string(in: dict, keys: ["source", "platform", "provider", "musicSource"])?.lowercased()
         switch platform {
         case "qq", "tx", "qqmusic": return "tx"
-        case "kugou", "kg": return "kg"
         default: return nil
         }
     }

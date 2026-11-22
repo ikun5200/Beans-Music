@@ -32,7 +32,7 @@ extension Data {
     }
 }
 
-/// 扫码登录状态（QQ / 酷狗二维码登录共用）。
+/// 扫码登录状态（QQ 二维码登录）。
 enum QRStatus: Equatable {
     case loading
     case waiting

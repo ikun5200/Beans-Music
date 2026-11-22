@@ -918,3 +918,30 @@ extension Color {
         UIColor(self).hexString
     }
 }
+
+// MARK: - 原生系统动画（Liquid Glass 动效指导）
+
+/// 对齐 Apple Liquid Glass 的流体动效：优先使用系统原生 `.snappy` / `.smooth` /
+/// `.bouncy`（iOS 17+），低版本回退为等效弹簧曲线；并尊重「减弱动态效果」辅助功能。
+extension Animation {
+    /// 控件反馈、展开/收起等即时交互（对应系统 snappy）。
+    static var beansSnappy: Animation {
+        if UIAccessibility.isReduceMotionEnabled { return .linear(duration: 0.01) }
+        if #available(iOS 17.0, *) { return .snappy(duration: 0.32, extraBounce: 0.04) }
+        return .spring(response: 0.32, dampingFraction: 0.86)
+    }
+
+    /// 页面/内容切换等平滑过渡（对应系统 smooth）。
+    static var beansSmooth: Animation {
+        if UIAccessibility.isReduceMotionEnabled { return .linear(duration: 0.01) }
+        if #available(iOS 17.0, *) { return .smooth(duration: 0.38) }
+        return .spring(response: 0.38, dampingFraction: 1.0)
+    }
+
+    /// 强调型弹入反馈（对应系统 bouncy），用于收藏、加入歌单等成功动作。
+    static var beansBouncy: Animation {
+        if UIAccessibility.isReduceMotionEnabled { return .linear(duration: 0.01) }
+        if #available(iOS 17.0, *) { return .bouncy(duration: 0.42, extraBounce: 0.08) }
+        return .spring(response: 0.42, dampingFraction: 0.72)
+    }
+}

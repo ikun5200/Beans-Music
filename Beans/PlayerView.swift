@@ -290,7 +290,7 @@ struct PlayerView: View {
     }
 
     private func closePlayerSettings() {
-        withAnimation(.easeOut(duration: 0.24)) {
+        withAnimation(.beansSnappy) {
             showPlayerSettings = false
         }
     }
@@ -549,7 +549,7 @@ struct PlayerView: View {
                 coverSwitchPulse = shouldPulse
                 if shouldPulse {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-                        withAnimation(.easeOut(duration: 0.20)) {
+                        withAnimation(.beansSnappy) {
                             coverSwitchPulse = false
                         }
                     }
@@ -573,7 +573,7 @@ struct PlayerView: View {
                     showMoreSettingsHint = true
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
-                    withAnimation(.easeOut(duration: 0.22)) {
+                    withAnimation(.beansSnappy) {
                         showMoreSettingsHint = false
                     }
                 }
@@ -917,7 +917,7 @@ struct PlayerView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .animation(.easeInOut(duration: 0.22), value: showLyrics)
+        .animation(.beansSmooth, value: showLyrics)
     }
 
     /// 封面尺寸：固定算法，与布局时序无关
@@ -1341,7 +1341,7 @@ struct PlayerView: View {
         guard let index = vinylCurrentLyricIndex else { return }
         let action = { proxy.scrollTo(index, anchor: vinylLyricsFocusAnchor) }
         if animated {
-            withAnimation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.38)) { action() }
+            withAnimation(.beansSnappy) { action() }
         } else {
             action()
         }
@@ -1351,7 +1351,7 @@ struct PlayerView: View {
         vinylLyricsResumeTask?.cancel()
         let target = vinylFocusedLyricIndex ?? vinylCurrentLyricIndex
         if let target {
-            withAnimation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.34)) {
+            withAnimation(.beansSnappy) {
                 proxy.scrollTo(target, anchor: vinylLyricsFocusAnchor)
             }
         }
@@ -1455,7 +1455,7 @@ struct PlayerView: View {
                         .rotation3DEffect(.degrees(Double(coverDrag.width / 18)), axis: (x: 0, y: 1, z: 0), perspective: 0.55)
                         .offset(x: coverDrag.width * 0.05, y: coverDrag.height * 0.05)
                         .animation(.spring(response: 0.34, dampingFraction: 0.86), value: coverDrag)
-                        .animation(.easeOut(duration: 0.24), value: coverSwitchPulse)
+                        .animation(.beansSnappy, value: coverSwitchPulse)
                 }
                 .frame(width: size * 1.10, height: size * 1.10)
                 .gesture(
@@ -1566,7 +1566,7 @@ struct PlayerView: View {
                         .rotation3DEffect(.degrees(Double(coverDrag.height / -24)), axis: (x: 1, y: 0, z: 0), perspective: 0.45)
                         .rotation3DEffect(.degrees(Double(coverDrag.width / 24)), axis: (x: 0, y: 1, z: 0), perspective: 0.45)
                         .animation(.spring(response: 0.34, dampingFraction: 0.86), value: coverDrag)
-                        .animation(.easeOut(duration: 0.24), value: coverSwitchPulse)
+                        .animation(.beansSnappy, value: coverSwitchPulse)
 
                         LinearGradient(
                             colors: [.clear, .black.opacity(0.54)],
@@ -1729,7 +1729,7 @@ struct PlayerView: View {
                         .frame(maxWidth: .infinity)
                         .scaleEffect(item.isCurrent ? 1.02 : 0.96)
                         .shadow(color: albumGlow(item.isCurrent ? albumPreviewLyricColor : albumPreviewDimColor), radius: albumTextGlow && item.isCurrent ? 8 : 0, y: 1)
-                        .animation(.easeInOut(duration: 0.18), value: item.isCurrent)
+                        .animation(.beansSmooth, value: item.isCurrent)
                 }
             }
         }
@@ -2769,19 +2769,13 @@ struct PlayerView: View {
         return [text]
     }
 
-    /// 各平台歌曲链接（QQ音乐 / 酷狗音乐）
+    /// QQ 音乐歌曲链接
     private func shareURL(for song: Song) -> URL? {
-        switch song.source {
-        case .qq:
-            if let mid = song.qqMid, !mid.isEmpty {
-                return URL(string: "https://y.qq.com/n/ryqq/songDetail/\(mid)")
-            }
-            let encoded = song.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? song.name
-            return URL(string: "https://y.qq.com/n/ryqq/search?w=\(encoded)")
-        case .kugou:
-            let encoded = song.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? song.name
-            return URL(string: "https://www.kugou.com/yy/html/search.html#searchType=song&searchKeyWord=\(encoded)")
+        if let mid = song.qqMid, !mid.isEmpty {
+            return URL(string: "https://y.qq.com/n/ryqq/songDetail/\(mid)")
         }
+        let encoded = song.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? song.name
+        return URL(string: "https://y.qq.com/n/ryqq/search?w=\(encoded)")
     }
 
     // MARK: - 下载
@@ -2850,7 +2844,7 @@ struct PlayerView: View {
 
     private func toggleLyrics() {
         BeansHaptics.tap()
-        withAnimation(.easeInOut(duration: 0.22)) {
+        withAnimation(.beansSmooth) {
             showLyrics.toggle()
         }
     }
@@ -2883,12 +2877,12 @@ struct PlayerView: View {
         let flyOut: CGFloat = direction * 560
         let flyIn: CGFloat = -direction * 560
         // 1) 当前封面继续向滑动方向飞出
-        withAnimation(.easeIn(duration: 0.17)) { swipeOffset = flyOut }
+        withAnimation(.beansSnappy) { swipeOffset = flyOut }
         // 2) 飞出后立即切歌，并把新封面放到对侧屏幕外，再滑回中央
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.17) {
             // 动画期间开关被关闭：面板直接复位，避免卡在屏幕外
             guard swipeSwitchSong else {
-                withAnimation(.easeOut(duration: 0.2)) {
+                withAnimation(.beansSnappy) {
                     swipeOffset = 0
                     coverDrag = .zero
                 }
@@ -2898,7 +2892,7 @@ struct PlayerView: View {
             swipeOffset = flyIn
             // 等下一帧先渲染出新封面在屏幕外的位置，再动画滑回中央（否则动画会从旧位置开始，方向不对）
             DispatchQueue.main.async {
-                withAnimation(.easeOut(duration: 0.26)) { swipeOffset = 0 }
+                withAnimation(.beansSnappy) { swipeOffset = 0 }
             }
         }
     }
@@ -2911,10 +2905,7 @@ struct PlayerView: View {
             guard self.song?.identityKey == identity else { return }
             self.lyrics = parsed
         }
-        if song.source == .kugou, let hash = song.kugouHash {
-            let raw = await KugouMusicAPI.shared.lyric(hash: hash, duration: song.duration)
-            apply(LyricParser.parse(raw))
-        } else if song.source == .qq, let mid = song.qqMid {
+        if let mid = song.qqMid {
             if let raw = try? await QQMusicAPI.shared.lyric(songmid: mid) {
                 apply(LyricParser.parse(raw))
             }
@@ -2928,7 +2919,7 @@ struct PlayerView: View {
             let (data, _) = try await URLSession.shared.data(from: url)
             guard let image = UIImage(data: data),
                   let dominant = PaletteExtractor.dominantColor(in: image) else { return }
-            withAnimation(.easeInOut(duration: 0.45)) {
+            withAnimation(.beansSmooth) {
                 dominantColor = dominant
             }
         } catch {
@@ -3368,14 +3359,14 @@ struct LyricsSection: View {
                             // 使用 SwiftUI 高级手势 API，避免 iOS 16 上手写组合手势抢占 ScrollView 的垂直滚动。
                             .onTapGesture {
                                 if selectionMode {
-                                    withAnimation(.easeInOut(duration: 0.2)) { toggleSelect(index) }
+                                    withAnimation(.beansSmooth) { toggleSelect(index) }
                                 } else {
                                     onTapLine(line)
                                 }
                             }
                             .onLongPressGesture(minimumDuration: 0.35) {
                                 BeansHaptics.medium()
-                                withAnimation(.easeInOut(duration: 0.2)) {
+                                withAnimation(.beansSmooth) {
                                     if !selectionMode {
                                         selectionMode = true
                                         selected = [index]
@@ -3442,7 +3433,7 @@ struct LyricsSection: View {
                         resumeScrollTask?.cancel()
                         let selectedIndex = focusedIndex
                         if let selectedIndex {
-                            withAnimation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.38)) {
+                            withAnimation(.beansSnappy) {
                                 proxy.scrollTo(selectedIndex, anchor: .center)
                             }
                         }
@@ -3461,7 +3452,7 @@ struct LyricsSection: View {
             }
             .onChange(of: currentIndex) { newIndex in
                 guard let newIndex, !isUserScrolling else { return }
-                withAnimation(.easeInOut(duration: 0.3)) {
+                withAnimation(.beansSmooth) {
                     proxy.scrollTo(newIndex, anchor: anchor)
                 }
             }
@@ -3540,7 +3531,7 @@ struct LyricsSection: View {
                     .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: visualIndex)
+        .animation(.beansSmooth, value: visualIndex)
     }
 
     private func toggleSelect(_ index: Int) {
@@ -3561,7 +3552,7 @@ struct LyricsSection: View {
         guard !text.isEmpty else { return }
         UIPasteboard.general.string = text
         BeansHaptics.success()
-        withAnimation(.easeInOut(duration: 0.2)) {
+        withAnimation(.beansSmooth) {
             selectionMode = false
             selected = []
         }
@@ -3570,7 +3561,7 @@ struct LyricsSection: View {
     private var selectionBar: some View {
         HStack(spacing: 16) {
             Button {
-                withAnimation(.easeInOut(duration: 0.15)) { selected = Set(lyrics.indices) }
+                withAnimation(.beansSnappy) { selected = Set(lyrics.indices) }
             } label: {
                 Text("全选")
                     .font(BeansFont.appFont(13, .medium))
@@ -3587,7 +3578,7 @@ struct LyricsSection: View {
             .buttonStyle(.plain)
             Spacer()
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(.beansSmooth) {
                     selectionMode = false
                     selected = []
                 }
@@ -4000,7 +3991,7 @@ struct PlayerSettingsSheet: View {
         VStack(alignment: .leading, spacing: 9) {
             if let isExpanded {
                 Button {
-                    withAnimation(.easeOut(duration: 0.16)) {
+                    withAnimation(.beansSnappy) {
                         isExpanded.wrappedValue.toggle()
                     }
                     BeansHaptics.select()

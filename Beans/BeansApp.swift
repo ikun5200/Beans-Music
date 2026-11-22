@@ -26,7 +26,6 @@ struct BeansApp: App {
             "beans.homeHideUsername": true,
             "beans.homeHeaderHideSort": true,
             "beans.homeHeaderHideRefresh": true,
-            PlatformPreferenceStore.hidePickerKey: true,
             "beans.homeWallpaperBlur": 0.0,
             "beans.haptics.enabled": true,
             "beans.playback.autoResumeLast": false,

@@ -38,39 +38,6 @@ struct FlowLayout: Layout {
     }
 }
 
-enum SearchProvider: String, CaseIterable, Identifiable, Hashable {
-    case qq = "QQ音乐"
-    case kugou = "酷狗音乐"
-
-    var id: String { rawValue }
-
-    /// 主题色渐变：QQ 绿 / 酷狗蓝
-    var tint: LinearGradient {
-        switch self {
-        case .qq: return LinearGradient(
-            colors: [Color(red: 0.15, green: 0.78, blue: 0.55), Color(red: 0.05, green: 0.58, blue: 0.42)],
-            startPoint: .topLeading, endPoint: .bottomTrailing)
-        case .kugou: return LinearGradient(
-            colors: [Color(red: 0.12, green: 0.58, blue: 0.95), Color(red: 0.02, green: 0.32, blue: 0.72)],
-            startPoint: .topLeading, endPoint: .bottomTrailing)
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .qq: return "play.rectangle.fill"
-        case .kugou: return "music.note"
-        }
-    }
-
-    var brandImageName: String? {
-        switch self {
-        case .qq: return "BrandQQ"
-        case .kugou: return "BrandKugou"
-        }
-    }
-}
-
 enum SearchResultType: String, CaseIterable, Identifiable {
     case song = "歌曲"
     case artist = "歌手"
@@ -84,15 +51,8 @@ struct SearchView: View {
     @EnvironmentObject private var player: PlayerManager
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("beans.uiStyle") private var uiStyleRaw = BeansUIStyle.liquid.rawValue
-    @AppStorage(PlatformPreferenceStore.hidePickerKey) private var hidePlatformPicker = false
 
     @State private var keyword = ""
-    @AppStorage("beans.search.provider") private var providerRaw = SearchProvider.qq.rawValue
-    @State private var provider: SearchProvider = .qq
-    @ObservedObject private var platformPrefs = PlatformPreferenceStore.shared
-    private var searchProviders: [SearchProvider] { platformPrefs.enabledSearchProviders }
-    /// 已加载热门搜索的 provider（避免切 tab 反复加载）
-    @State private var hotLoadedProvider: SearchProvider?
     @State private var resultType: SearchResultType = .song
     @State private var songResults: [Song] = []
     @State private var artistResults: [Artist] = []
@@ -130,20 +90,12 @@ struct SearchView: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 10)
 
-                if !hidePlatformPicker {
-                    providerPicker
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 8)
-                }
-
                 contentArea
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .task(id: provider) {
-            guard hotLoadedProvider != provider else { return }
-            hotLoadedProvider = provider
+        .task {
             hotWords = []
             await loadHotWords()
         }
@@ -161,23 +113,6 @@ struct SearchView: View {
                 try? await Task.sleep(nanoseconds: 400_000_000)
                 guard !Task.isCancelled else { return }
                 await startSearch(trimmed)
-            }
-        }
-        .onChange(of: provider) { _ in
-            providerRaw = provider.rawValue
-            let trimmed = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return }
-            debounceTask?.cancel()
-            Task { await startSearch(trimmed) }
-        }
-        .onAppear {
-            provider = platformPrefs.ensureVisible(SearchProvider(rawValue: providerRaw) ?? .qq)
-        }
-        .onReceive(platformPrefs.changes) { _ in
-            let next = platformPrefs.ensureVisible(provider)
-            if next != provider {
-                provider = next
-                hotLoadedProvider = nil
             }
         }
         .sheet(item: $showAddToPlaylist) { song in
@@ -203,37 +138,6 @@ struct SearchView: View {
                 .font(BeansFont.appFont(32, .bold))
                 .foregroundStyle(Color.beansLabel)
             Spacer(minLength: 0)
-            Menu {
-                ForEach(searchProviders) { candidate in
-                    Button {
-                        BeansHaptics.tap()
-                        provider = candidate
-                    } label: {
-                        Label(LocalizedStringKey(candidate.rawValue), systemImage: candidate == provider ? "checkmark" : candidate.icon)
-                    }
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    if let imageName = provider.brandImageName {
-                        Image(imageName)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 15, height: 15)
-                    } else {
-                        Image(systemName: provider.icon)
-                            .font(.system(size: 12, weight: .semibold))
-                    }
-                    Text(LocalizedStringKey(provider.rawValue))
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 9, weight: .bold))
-                }
-                .font(BeansFont.appFont(12, .semibold))
-                .foregroundStyle(Color.beansComment)
-                .padding(.horizontal, 11)
-                .padding(.vertical, 6)
-                .background { BeansGlass(shape: Capsule()) }
-            }
-            .disabled(searchProviders.count < 2)
         }
     }
 
@@ -331,47 +235,6 @@ struct SearchView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - 平台选择（等宽分段控件）
-
-    private var providerPicker: some View {
-        HStack(spacing: 4) {
-            ForEach(searchProviders) { p in
-                Button {
-                    BeansHaptics.tap()
-                    if provider != p { provider = p }
-                } label: {
-                    HStack(spacing: 6) {
-                        if let imageName = p.brandImageName {
-                            Image(imageName)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 14, height: 14)
-                        } else {
-                            Image(systemName: p.icon)
-                                .font(.system(size: 11, weight: .semibold))
-                        }
-                        Text(LocalizedStringKey(p.rawValue))
-                            .font(BeansFont.appFont(13, .semibold))
-                    }
-                    .foregroundStyle(provider == p ? Color.white : Color.beansComment)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 9)
-                    .background {
-                        if provider == p {
-                            Capsule().fill(p.tint)
-                        } else {
-                            Capsule().fill(.clear)
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(4)
-        .background { BeansSurface(shape: Capsule()) }
-        .clipShape(Capsule())
-    }
-
     // MARK: - 分类选择（歌曲 / 歌手 / 专辑）
 
     private var typeTabs: some View {
@@ -430,7 +293,7 @@ struct SearchView: View {
                     historyStore.record(word)
                     Task { await startSearch(word) }
                 }
-                SectionHeader(title: provider == .qq ? "QQ音乐热搜" : "酷狗音乐热搜")
+                SectionHeader(title: "QQ音乐热搜")
                 if hotWords.isEmpty {
                     LoadingStateView()
                 } else {
@@ -536,12 +399,12 @@ struct SearchView: View {
             } else if searching && songResults.isEmpty {
                 LoadingStateView()
             } else if songResults.isEmpty {
-                EmptyStateView(icon: "music.note", text: "\(provider.rawValue)未找到相关歌曲")
+                EmptyStateView(icon: "music.note", text: "QQ音乐未找到相关歌曲")
             } else {
                 ScrollView {
                     LazyVStack(spacing: 8) {
                         HStack(spacing: 8) {
-                            Text(beansLocalized("找到 \(songResults.count) 首 · \(provider.rawValue)", "Found \(songResults.count) songs · \(beansPlatformName(provider))"))
+                            Text(beansLocalized("找到 \(songResults.count) 首", "Found \(songResults.count) songs"))
                                 .font(BeansFont.appFont(12))
                                 .foregroundStyle(Color.beansComment)
                                 .lineLimit(1)
@@ -602,12 +465,12 @@ struct SearchView: View {
             } else if searching && artistResults.isEmpty {
                 LoadingStateView()
             } else if artistResults.isEmpty {
-                EmptyStateView(icon: "person.crop.circle", text: "\(provider.rawValue)未找到相关歌手")
+                EmptyStateView(icon: "person.crop.circle", text: "QQ音乐未找到相关歌手")
             } else {
                 ScrollView {
                     LazyVStack(spacing: 8) {
                         HStack {
-                            Text(beansLocalized("找到 \(artistResults.count) 位 · \(provider.rawValue)", "Found \(artistResults.count) artists · \(beansPlatformName(provider))"))
+                            Text(beansLocalized("找到 \(artistResults.count) 位", "Found \(artistResults.count) artists"))
                                 .font(BeansFont.appFont(12))
                                 .foregroundStyle(Color.beansComment)
                                 .lineLimit(1)
@@ -675,12 +538,12 @@ struct SearchView: View {
             } else if searching && albumResults.isEmpty {
                 LoadingStateView()
             } else if albumResults.isEmpty {
-                EmptyStateView(icon: "square.stack", text: "\(provider.rawValue)未找到相关专辑")
+                EmptyStateView(icon: "square.stack", text: "QQ音乐未找到相关专辑")
             } else {
                 ScrollView {
                     LazyVStack(spacing: 8) {
                         HStack {
-                            Text(beansLocalized("找到 \(albumResults.count) 张 · \(provider.rawValue)", "Found \(albumResults.count) albums · \(beansPlatformName(provider))"))
+                            Text(beansLocalized("找到 \(albumResults.count) 张", "Found \(albumResults.count) albums"))
                                 .font(BeansFont.appFont(12))
                                 .foregroundStyle(Color.beansComment)
                                 .lineLimit(1)
@@ -765,12 +628,8 @@ struct SearchView: View {
     }
 
     private func loadHotWords() async {
-        if provider == .qq {
-            if let words = try? await QQMusicAPI.shared.hotKeys() {
-                hotWords = words
-            }
-        } else if provider == .kugou {
-            hotWords = await KugouMusicAPI.shared.hotWords()
+        if let words = try? await QQMusicAPI.shared.hotKeys() {
+            hotWords = words
         }
     }
 
@@ -778,62 +637,46 @@ struct SearchView: View {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         searchTask?.cancel()
-        let selectedProvider = provider
         let selectedType = resultType
         searchTask = Task {
             await MainActor.run {
                 searching = true
                 errorMessage = nil
             }
-            BeansLogger.shared.log("搜索：\(selectedProvider.rawValue) [\(selectedType.rawValue)] \(trimmed)", level: .info)
+            BeansLogger.shared.log("搜索：QQ音乐 [\(selectedType.rawValue)] \(trimmed)", level: .info)
             defer {
                 if !Task.isCancelled {
                     Task { @MainActor in searching = false }
                 }
             }
             do {
-                switch (selectedProvider, selectedType) {
-                case (.qq, .song):
+                switch selectedType {
+                case .song:
                     let songs = try await QQMusicAPI.shared.searchSongs(keyword: trimmed)
                     guard !Task.isCancelled else { return }
                     await MainActor.run {
                         songResults = songs
                         if !songs.isEmpty { BeansHaptics.success() }
                     }
-                case (.qq, .artist):
+                case .artist:
                     let artists = try await QQMusicAPI.shared.searchArtists(keyword: trimmed)
                     guard !Task.isCancelled else { return }
                     await MainActor.run { artistResults = artists }
-                case (.qq, .album):
+                case .album:
                     let albums = try await QQMusicAPI.shared.searchAlbums(keyword: trimmed)
-                    guard !Task.isCancelled else { return }
-                    await MainActor.run { albumResults = albums }
-                case (.kugou, .song):
-                    let songs = try await KugouMusicAPI.shared.searchSongs(keyword: trimmed, limit: 40)
-                    guard !Task.isCancelled else { return }
-                    await MainActor.run {
-                        songResults = songs
-                        if !songs.isEmpty { BeansHaptics.success() }
-                    }
-                case (.kugou, .artist):
-                    let artists = try await KugouMusicAPI.shared.searchArtists(keyword: trimmed)
-                    guard !Task.isCancelled else { return }
-                    await MainActor.run { artistResults = artists }
-                case (.kugou, .album):
-                    let albums = try await KugouMusicAPI.shared.searchAlbums(keyword: trimmed)
                     guard !Task.isCancelled else { return }
                     await MainActor.run { albumResults = albums }
                 }
                 let count = await MainActor.run {
                     selectedType == .song ? songResults.count : (selectedType == .artist ? artistResults.count : albumResults.count)
                 }
-                BeansLogger.shared.log("搜索完成：\(selectedProvider.rawValue) [\(selectedType.rawValue)] \(trimmed) 结果=\(count)", level: .info)
+                BeansLogger.shared.log("搜索完成：QQ音乐 [\(selectedType.rawValue)] \(trimmed) 结果=\(count)", level: .info)
             } catch {
                 guard !Task.isCancelled else { return }
                 await MainActor.run {
                     errorMessage = error.localizedDescription
                 }
-                BeansLogger.shared.log("搜索失败：\(selectedProvider.rawValue) \(trimmed) - \(error.localizedDescription)", level: .error)
+                BeansLogger.shared.log("搜索失败：QQ音乐 \(trimmed) - \(error.localizedDescription)", level: .error)
             }
         }
         await searchTask?.value
@@ -926,22 +769,12 @@ struct AlbumDetailView: View {
         }
         do {
             let result: [Song]
-            switch album.source {
-            case .qq:
-                result = await searchFallbackSongs(
-                    queries: [albumSearchQuery, album.name],
-                    search: { query in
-                        (try? await QQMusicAPI.shared.searchSongs(keyword: query, limit: 100)) ?? []
-                    }
-                )
-            case .kugou:
-                result = await searchFallbackSongs(
-                    queries: [albumSearchQuery, album.name],
-                    search: { query in
-                        (try? await KugouMusicAPI.shared.searchSongs(keyword: query, limit: 100)) ?? []
-                    }
-                )
-            }
+            result = await searchFallbackSongs(
+                queries: [albumSearchQuery, album.name],
+                search: { query in
+                    (try? await QQMusicAPI.shared.searchSongs(keyword: query, limit: 100)) ?? []
+                }
+            )
             if !result.isEmpty {
                 cache.save(result, for: cacheKey)
             }

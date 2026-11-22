@@ -11,12 +11,11 @@ final class DiscoverCache {
         var dailySongs: [Song] = []
         var personalized: [Playlist] = []
         var qqTopLists: [QQTopInfo] = []
-        var kugouTopLists: [KugouTopInfo] = []
         var savedAt: Date = .distantPast
 
         var isEmpty: Bool {
             dailySongs.isEmpty && personalized.isEmpty
-                && qqTopLists.isEmpty && kugouTopLists.isEmpty
+                && qqTopLists.isEmpty
         }
     }
 
@@ -29,12 +28,12 @@ final class DiscoverCache {
 
     private init() {}
 
-    func cached(for source: SearchProvider) -> Snapshot? {
-        store[source.rawValue]
+    func cached() -> Snapshot? {
+        store["qq"]
     }
 
-    func save(_ snapshot: Snapshot, for source: SearchProvider) {
-        store[source.rawValue] = snapshot
+    func save(_ snapshot: Snapshot) {
+        store["qq"] = snapshot
     }
 
     /// 缓存是否仍然新鲜：每日推荐单独放宽到 6 小时，其余按 1 小时

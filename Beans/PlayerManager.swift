@@ -97,8 +97,6 @@ final class PlayerManager: NSObject, ObservableObject {
     private var lastPublishedProgress: Double = -1
     private var lastPersistedProgress: Double = -1
     private var lastNowPlayingArtworkKey: String?
-    /// 酷狗高音质地址在部分账号/系统上会返回但无法由 AVPlayer 打开；每首歌只自动降级一次。
-    private var kugouStandardFallbackSongKey: String?
     /// 第三方地址偶发过期或节点不可用时，按失败域名重试，避免同一节点反复进入播放器。
     private var thirdPartyRetryExcludedHostsBySong: [String: Set<String>] = [:]
     /// 记录已经交给 AVPlayer 的第三方音质，失败后选择下一个更低档位。
@@ -461,7 +459,7 @@ final class PlayerManager: NSObject, ObservableObject {
         updateNowPlaying()
     }
 
-    private func loadCurrent(resumeAt: Double? = nil, forceKugouStandard: Bool = false) {
+    private func loadCurrent(resumeAt: Double? = nil) {
         guard ensurePlaybackAllowed() else { return }
         guard let song = currentSong else { return }
         loadGeneration += 1
@@ -496,29 +494,27 @@ final class PlayerManager: NSObject, ObservableObject {
             // 官方地址失败后，使用已启用的自定义音源兜底。
             let enableUnblock = externalSourcesEnabled
             let strictUnlock = shouldLockOfficialOnly(song)
-            let quality = (forceKugouStandard && song.source == .kugou) ? .standard : BeansAudioQuality.current
+            let quality = BeansAudioQuality.current
             let thirdPartyQuality = ThirdPartyAudioQuality.current
             BeansLogger.shared.log("▶ 开始播放：\(song.name) - \(song.artists)｜平台=\(song.source.rawValue) id=\(song.id) 音质=\(quality.level) 第三方音质=\(thirdPartyQuality.rawValue) 自定义音源=\(enableUnblock ? "开" : "关") 官方受限=\(strictUnlock ? "是" : "否")", level: .info)
-            if song.source == .kugou {
-                urlString = try? await KugouMusicAPI.shared.songURL(song: song, quality: quality)
-                if urlString == nil {
-                    resolvedThirdParty = await kugouFallback(
-                        song: song,
-                        thirdPartyQuality: thirdPartyQuality,
-                        enableUnblock: enableUnblock
-                    )
+            if let mid = song.qqMid {
+                // 播放优先级：内置聆澜音源 → QQ 官方 vkey → 用户自建第三方音源。
+                if LinglanSource.shared.canResolve,
+                   let resolved = await LinglanSource.shared.resolve(songID: song.id, quality: thirdPartyQuality) {
+                    resolvedThirdParty = resolved
+                    BeansLogger.shared.log("聆澜音源优先解析成功：\(song.name) 音质=\(resolved.quality.rawValue)", level: .info)
                 }
-            } else if song.source == .qq, let mid = song.qqMid {
-                // QQ 官方地址失败后只走 QQ 第三方音源，不跨平台匹配同名歌曲。
-                let officialResult = try? await QQMusicAPI.shared.songURLResult(
-                    songmid: mid,
-                    mediaMid: song.qqMediaMid,
-                    quality: quality
-                )
-                urlString = officialResult?.url
-                qqOfficialBR = officialResult?.br
-                attemptedQQOfficialBRs = officialResult?.attemptedBRs ?? []
-                if urlString == nil {
+                if resolvedThirdParty == nil {
+                    let officialResult = try? await QQMusicAPI.shared.songURLResult(
+                        songmid: mid,
+                        mediaMid: song.qqMediaMid,
+                        quality: quality
+                    )
+                    urlString = officialResult?.url
+                    qqOfficialBR = officialResult?.br
+                    attemptedQQOfficialBRs = officialResult?.attemptedBRs ?? []
+                }
+                if resolvedThirdParty == nil, urlString == nil {
                     (urlString, resolvedThirdParty) = await qqFallback(
                         song: song,
                         quality: quality,
@@ -604,50 +600,6 @@ final class PlayerManager: NSObject, ObservableObject {
     /// 保留扩展位：跨平台兜底已移除，恒返回 false（不再按歌手硬拦截官方播放）。
     private func shouldLockOfficialOnly(_ song: Song) -> Bool {
         false
-    }
-
-    /// 酷狗兜底：官方播放失败后使用内置音源作为备选。
-    private func kugouFallback(
-        song: Song,
-        thirdPartyQuality: ThirdPartyAudioQuality = .current,
-        enableUnblock: Bool
-    ) async -> UnblockService.Resolved? {
-        guard enableUnblock else { return nil }
-        let kugouID = song.kugouHash ?? song.kugouAlbumAudioId ?? ""
-        if kugouID.isEmpty {
-            BeansLogger.shared.log("酷狗兜底跳过：缺少 album_audio_id/hash", level: .debug)
-        } else {
-            let resolved = await UnblockService.resolve(
-                name: song.name,
-                artists: song.artists,
-                songID: 0,
-                songSource: .kugou,
-                kugouID: kugouID,
-                quality: thirdPartyQuality
-            )
-            if let resolved {
-                BeansLogger.shared.log("酷狗兜底：\(song.name) 酷狗音源=命中", level: .debug)
-                return resolved
-            }
-        }
-
-        BeansLogger.shared.log("酷狗兜底：\(song.name) 第三方=未命中", level: .debug)
-        return nil
-    }
-
-    /// 仅在高音质地址已经交给 AVPlayer 但实际无法打开时回退标准音质。
-    /// 这样正常账号仍优先使用高音质，兼容部分旧系统或账号返回的不可解码资源。
-    @discardableResult
-    private func retryKugouAtStandardIfNeeded(error: Error?) -> Bool {
-        guard let song = currentSong,
-              song.source == .kugou,
-              BeansAudioQuality.current != .standard,
-              kugouStandardFallbackSongKey != song.identityKey else { return false }
-        kugouStandardFallbackSongKey = song.identityKey
-        let resume = progress
-        BeansLogger.shared.log("酷狗高音质地址无法打开，自动回退标准音质：歌曲=\(song.name) 系统=\(UIDevice.current.systemVersion) 错误=\(error?.localizedDescription ?? "未知错误")", level: .debug)
-        loadCurrent(resumeAt: resume, forceKugouStandard: true)
-        return true
     }
 
     @discardableResult
@@ -895,17 +847,6 @@ final class PlayerManager: NSObject, ObservableObject {
                 "AVURLAssetHTTPHeaderFieldsKey": playbackHeaders
             ])
             item = AVPlayerItem(asset: asset)
-        } else if url.host?.contains("kugou.com") == true || url.host?.contains("kgimg.com") == true {
-            playbackHeaders = [
-                "User-Agent": "Android15-1070-11440-46-0-DiscoveryDRADProtocol-wifi",
-                "Referer": "https://www.kugou.com/",
-            ]
-            let cookie = KugouMusicAuth.shared.cookieHeader
-            if !cookie.isEmpty { playbackHeaders["Cookie"] = cookie }
-            let asset = AVURLAsset(url: url, options: [
-                "AVURLAssetHTTPHeaderFieldsKey": playbackHeaders
-            ])
-            item = AVPlayerItem(asset: asset)
         } else {
             item = AVPlayerItem(url: url)
         }
@@ -939,7 +880,6 @@ final class PlayerManager: NSObject, ObservableObject {
                 if isThirdParty && self.retryThirdPartyIfNeeded(excludingHost: url.host) { return }
                 if !isThirdParty && self.retryQQOfficialIfNeeded() { return }
                 if !isThirdParty && self.fallbackQQToThirdPartyIfNeeded() { return }
-                if self.retryKugouAtStandardIfNeeded(error: item.error) { return }
                 self.finishUnrecoverablePlaybackFailure(song: loadedSong, reason: "AVPlayerItem 加载失败")
             }
         }
@@ -966,8 +906,7 @@ final class PlayerManager: NSObject, ObservableObject {
                         if isThirdParty && self.retryThirdPartyIfNeeded(excludingHost: url.host) { return }
                         if !isThirdParty && self.retryQQOfficialIfNeeded() { return }
                         if !isThirdParty && self.fallbackQQToThirdPartyIfNeeded() { return }
-                        if self.retryKugouAtStandardIfNeeded(error: item.error) { return }
-                        self.finishUnrecoverablePlaybackFailure(
+                                self.finishUnrecoverablePlaybackFailure(
                             song: loadedSong,
                             reason: "播放地址长时间未响应"
                         )
@@ -1063,7 +1002,6 @@ final class PlayerManager: NSObject, ObservableObject {
             if !isThirdParty && self.retryQQOfficialIfNeeded() { return }
             if !isThirdParty && self.fallbackQQToThirdPartyIfNeeded() { return }
             if isThirdParty && self.retryThirdPartyIfNeeded(excludingHost: url.host) { return }
-            if self.retryKugouAtStandardIfNeeded(error: item.error) { return }
             self.finishUnrecoverablePlaybackFailure(song: loadedSong, reason: "播放中断失败")
         }
         updateNowPlaying()
@@ -1150,18 +1088,6 @@ final class PlayerManager: NSObject, ObservableObject {
                 strict: strict,
                 excludedHosts: excludedHosts
             ).1
-        case .kugou:
-            let kugouID = song.kugouHash ?? song.kugouAlbumAudioId
-            guard let kugouID, !kugouID.isEmpty else { return nil }
-            return await UnblockService.resolve(
-                name: song.name,
-                artists: song.artists,
-                songID: 0,
-                songSource: .kugou,
-                kugouID: kugouID,
-                quality: quality,
-                excludedHosts: excludedHosts
-            )
         }
     }
 
@@ -1328,8 +1254,6 @@ final class PlayerManager: NSObject, ObservableObject {
         switch source {
         case .qq:
             return QQMusicAuth.shared.vipBadge != nil
-        case .kugou:
-            return KugouMusicAuth.shared.vipBadge != nil
         }
     }
 

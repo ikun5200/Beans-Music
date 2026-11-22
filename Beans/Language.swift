@@ -20,13 +20,6 @@ func beansLocalized(_ chinese: String, _ english: String) -> String {
     UserDefaults.standard.string(forKey: "beans.language") == AppLanguage.english.rawValue ? english : chinese
 }
 
-func beansPlatformName(_ provider: SearchProvider) -> String {
-    switch provider {
-    case .qq: return beansLocalized("QQ音乐", "QQ Music")
-    case .kugou: return beansLocalized("酷狗音乐", "Kugou Music")
-    }
-}
-
 func beansChartName(_ name: String) -> String {
     guard UserDefaults.standard.string(forKey: "beans.language") == AppLanguage.english.rawValue else { return name }
     let replacements: [(String, String)] = [
@@ -46,11 +39,9 @@ func beansChartName(_ name: String) -> String {
         ("巅峰榜·欧美", "Peak Chart · Western Music"),
         ("巅峰榜·内地", "Peak Chart · Mainland China"),
         ("巅峰榜·港台", "Peak Chart · Hong Kong & Taiwan"),
-        ("酷狗TOP500", "Kugou TOP 500"),
         ("网络红歌榜", "Viral Songs"),
         ("网络热歌榜", "Online Hot Songs"),
         ("TOP500", "TOP 500"),
-        ("视频号热歌酷狗榜", "WeChat Channels Hot Songs"),
         ("短视频收藏人气榜", "Short-video Favorites"),
         ("JOOX香港热歌榜", "JOOX Hong Kong Hot Songs"),
         ("80后热歌榜", "Post-80s Hot Songs"),
@@ -121,7 +112,6 @@ func beansChartSubtitle(_ subtitle: String) -> String {
         ("周四", "Updated Thursday"),
         ("每年年底", "Updated at year end"),
         ("官方热门榜单", "Official popular chart"),
-        ("酷狗官网热门榜单", "Kugou popular chart"),
         ("QQ 峰尖榜", "QQ Music Peak Chart"),
         ("峰尖榜", "Peak Chart")
     ]

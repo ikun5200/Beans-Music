@@ -1,7 +1,7 @@
 import Foundation
 
 struct UpdateChecker {
-    static let repoPath = "XIaodou0416/Beans-Music"
+    static let repoPath = "ikun5200/Beans-Music"
     static let releasePageURL = URL(string: "https://github.com/\(repoPath)/releases/latest")!
     private static let latestAPI = URL(string: "https://api.github.com/repos/\(repoPath)/releases/latest")!
     private static let suppressedVersionKey = "beans.updateCheck.suppressedVersion"

@@ -22,7 +22,7 @@ extension ThirdPartyAudioQuality {
         }
     }
 
-    /// 酷狗官方接口所能理解的质量档位。
+    /// QQ 音乐官方接口所能理解的质量档位。
     var beansQuality: BeansAudioQuality {
         switch self {
         case .kb128: return .standard
@@ -146,17 +146,28 @@ final class DownloadManager {
     }
 
     private func resolveURL(song: Song, quality: DownloadQuality) async -> ResolvedDownloadURL? {
-        // 下载优先复用已配置的第三方音源，避免播放能用第三方而下载仍走官方地址。
-        let thirdPartyID = song.source == .qq ? song.id : 0
-        let thirdPartyKugouID = song.kugouHash ?? song.kugouAlbumAudioId
+        // 下载优先级：内置聆澜音源 → 用户自建第三方音源 → QQ 官方 vkey。
+        if song.source == .qq,
+           LinglanSource.shared.canResolve,
+           let resolved = await LinglanSource.shared.resolve(songID: song.id, quality: quality) {
+            BeansLogger.shared.log(
+                "下载使用聆澜音源：\(song.name) 请求音质=\(quality.rawValue) 实际音质=\(resolved.quality.rawValue)",
+                level: .info
+            )
+            return ResolvedDownloadURL(
+                url: resolved.url,
+                actualQuality: resolved.quality,
+                sourceName: resolved.source
+            )
+        }
+
         if let resolved = await UnblockService.resolve(
             name: song.name,
             artists: song.artists,
-            songID: thirdPartyID,
+            songID: song.id,
             songSource: song.source,
             qqMid: song.qqMid,
             qqMediaMid: song.qqMediaMid,
-            kugouID: thirdPartyKugouID,
             quality: quality
         ) {
             BeansLogger.shared.log(
@@ -182,10 +193,6 @@ final class DownloadManager {
                 actualQuality: Self.downloadQuality(forQQBR: result.br),
                 sourceName: nil
             )
-        } else if song.source == .kugou {
-            guard let urlString = try? await KugouMusicAPI.shared.songURL(song: song, quality: quality.beansQuality),
-                  let url = URL(string: urlString) else { return nil }
-            return ResolvedDownloadURL(url: url, actualQuality: quality, sourceName: nil)
         }
         return nil
     }
@@ -198,13 +205,6 @@ final class DownloadManager {
         if isQQHost(url.host) {
             request.setValue("https://y.qq.com/", forHTTPHeaderField: "Referer")
             let cookie = QQMusicAuth.shared.cookieHeader
-            if !cookie.isEmpty {
-                request.setValue(cookie, forHTTPHeaderField: "Cookie")
-            }
-        } else if url.host?.lowercased().contains("kugou") == true
-                    || url.host?.lowercased().contains("kgimg.com") == true {
-            request.setValue("https://www.kugou.com/", forHTTPHeaderField: "Referer")
-            let cookie = KugouMusicAuth.shared.cookieHeader
             if !cookie.isEmpty {
                 request.setValue(cookie, forHTTPHeaderField: "Cookie")
             }

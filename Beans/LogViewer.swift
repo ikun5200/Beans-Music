@@ -158,8 +158,6 @@ private enum BeansLogLocalizer {
         ("官方受限", "officially restricted"),
         ("QQ 音乐", "QQ Music"),
         ("QQ音乐", "QQ Music"),
-        ("酷狗音乐", "Kugou Music"),
-        ("酷狗", "Kugou"),
         ("歌单同步", "playlist sync"),
         ("歌单", "playlist"),
         ("登录成功", "signed in"),

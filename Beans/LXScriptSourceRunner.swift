@@ -628,7 +628,6 @@ final class LXScriptSourceRunner {
         songID: String,
         qqMid: String? = nil,
         qqMediaMid: String? = nil,
-        kugouID: String? = nil,
         name: String,
         artists: String,
         quality: String,
@@ -643,7 +642,6 @@ final class LXScriptSourceRunner {
                     songID: songID,
                     qqMid: qqMid,
                     qqMediaMid: qqMediaMid,
-                    kugouID: kugouID,
                     name: name,
                     artists: artists,
                     quality: quality,
@@ -660,7 +658,6 @@ final class LXScriptSourceRunner {
         songID: String,
         qqMid: String?,
         qqMediaMid: String?,
-        kugouID: String?,
         name: String,
         artists: String,
         quality: String,
@@ -677,7 +674,6 @@ final class LXScriptSourceRunner {
                     songID: songID,
                     qqMid: qqMid,
                     qqMediaMid: qqMediaMid,
-                    kugouID: kugouID,
                     name: name,
                     artists: artists
                 )
@@ -709,14 +705,12 @@ final class LXScriptSourceRunner {
         songID: String,
         qqMid: String?,
         qqMediaMid: String?,
-        kugouID: String?,
         name: String,
         artists: String
     ) -> [String: Any] {
         let qqSongMid = qqMid?.trimmingCharacters(in: .whitespacesAndNewlines)
         let qqSongMediaMid = qqMediaMid?.trimmingCharacters(in: .whitespacesAndNewlines)
         let primaryID = (songSource == .qq ? qqSongMid : nil) ?? songID
-        let resolvedHash = (songSource == .kugou ? kugouID : nil) ?? songID
         let artistList = artists
             .split(whereSeparator: { $0 == "/" || $0 == "&" || $0 == "," })
             .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -756,7 +750,6 @@ final class LXScriptSourceRunner {
     private func providerCode(for source: SongSource) -> String {
         switch source {
         case .qq: return "tx"
-        case .kugou: return "kg"
         }
     }
 

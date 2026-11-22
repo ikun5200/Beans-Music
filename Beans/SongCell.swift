@@ -156,7 +156,7 @@ struct SongCell: View {
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 8)
-        .animation(.easeOut(duration: 0.28), value: appeared)
+        .animation(.beansSnappy, value: appeared)
         .onAppear { appeared = true }
     }
 }

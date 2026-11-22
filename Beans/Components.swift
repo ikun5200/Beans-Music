@@ -846,7 +846,7 @@ struct SectionEntrance: ViewModifier {
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 14)
             .onAppear {
-                withAnimation(.easeOut(duration: 0.5).delay(delay)) {
+                withAnimation(.beansSmooth.delay(delay)) {
                     appeared = true
                 }
             }

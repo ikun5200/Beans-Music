@@ -515,7 +515,6 @@ private struct ThirdPartySourceDraft: Identifiable {
 private enum ThirdPartySourcePlatform: String, CaseIterable, Identifiable {
     case all
     case qq
-    case kugou
 
     var id: String { rawValue }
 
@@ -523,7 +522,6 @@ private enum ThirdPartySourcePlatform: String, CaseIterable, Identifiable {
         switch self {
         case .all: return beansLocalized("全部平台", "All Platforms")
         case .qq: return beansLocalized("QQ音乐", "QQ Music")
-        case .kugou: return beansLocalized("酷狗音乐", "Kugou Music")
         }
     }
 
@@ -531,7 +529,6 @@ private enum ThirdPartySourcePlatform: String, CaseIterable, Identifiable {
         switch self {
         case .all: return nil
         case .qq: return "tx"
-        case .kugou: return "kg"
         }
     }
 
@@ -539,8 +536,6 @@ private enum ThirdPartySourcePlatform: String, CaseIterable, Identifiable {
         switch code.lowercased() {
         case "tx", "qq", "qqmusic":
             self = .qq
-        case "kg", "kugou":
-            self = .kugou
         default:
             self = .all
         }

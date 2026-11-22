@@ -6,16 +6,12 @@ final class FavoritesStore: ObservableObject {
 
     /// QQ 红心收藏（本地持久化，供音乐库展示）
     @Published private(set) var qqFavoriteSongs: [Song] = []
-    /// 酷狗红心收藏（本地持久化，酷狗暂无稳定云端红心写入接口）
-    @Published private(set) var kugouFavoriteSongs: [Song] = []
 
     private let defaults = UserDefaults.standard
     private let qqKey = "beans.fav.qq.v1"
-    private let kugouKey = "beans.fav.kugou.v1"
 
     private init() {
         qqFavoriteSongs = Self.loadSongs(qqKey)
-        kugouFavoriteSongs = Self.loadSongs(kugouKey)
     }
 
     /// 该歌曲是否已收藏
@@ -27,8 +23,6 @@ final class FavoritesStore: ObservableObject {
                 return qqFavoriteSongs.contains { $0.qqMid == mid || $0.identityKey == song.identityKey }
             }
             return qqFavoriteSongs.contains { $0.identityKey == song.identityKey }
-        case .kugou:
-            return kugouFavoriteSongs.contains { $0.identityKey == song.identityKey }
         }
     }
 
@@ -49,10 +43,6 @@ final class FavoritesStore: ObservableObject {
                     BeansLogger.shared.log("QQ 红心云端同步失败，已保留本地收藏：\(song.name) liked=\(liked)", level: .warn)
                 }
             }
-            return true
-        case .kugou:
-            let liked = !isLiked(song)
-            updateKugou(song, liked: liked)
             return true
         }
     }
@@ -86,16 +76,6 @@ final class FavoritesStore: ObservableObject {
             }
         }
         saveSongs(qqFavoriteSongs, key: qqKey)
-    }
-
-    private func updateKugou(_ song: Song, liked: Bool) {
-        if liked {
-            kugouFavoriteSongs.removeAll { $0.identityKey == song.identityKey }
-            kugouFavoriteSongs.insert(song, at: 0)
-        } else {
-            kugouFavoriteSongs.removeAll { $0.identityKey == song.identityKey }
-        }
-        saveSongs(kugouFavoriteSongs, key: kugouKey)
     }
 
     private static func loadSongs(_ key: String) -> [Song] {

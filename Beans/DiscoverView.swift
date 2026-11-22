@@ -4,14 +4,12 @@ import UIKit
 private enum DiscoverRoute: Hashable {
     case playlist(Playlist)
     case qqTopList(QQTopInfo)
-    case kugouTopList(KugouTopInfo)
     case dailySongs([Song])
 }
 
 struct DiscoverView: View {
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var player: PlayerManager
-    @ObservedObject private var platformPrefs = PlatformPreferenceStore.shared
 
     @State private var dailySongs: [Song] = []
     @State private var personalized: [Playlist] = []
@@ -21,15 +19,12 @@ struct DiscoverView: View {
     @State private var navigationPath: [DiscoverRoute] = []
     @State private var legacyRoute: DiscoverRoute?
     @State private var recommendationActionLoading: String?
-    @State private var showHomePlatformMenu = false
     @State private var showSectionSort = false
     /// 主页板块顺序（每日推荐 / 排行榜 / 歌单广场，可自定义）
     @State private var homeOrder = SectionOrderStore.load(SectionOrderStore.homeKey, defaults: SectionOrderStore.homeDefaults)
 
     /// 三个平台都保留每日推荐、排行榜和歌单板块，QQ 歌单板块展示官网推荐的热门歌单。
     private var availableSections: [String] { SectionOrderStore.homeDefaults }
-    /// 首页数据源：记住上次选择，下次打开仍保持该平台（默认 QQ 音乐）
-    @AppStorage("beans.homeSource") private var homeSourceRaw = SearchProvider.qq.rawValue
     @AppStorage("beans.homeGreetingText") private var homeGreetingText = ""
     @AppStorage("beans.homeGreetingSize") private var homeGreetingSize = 30.0
     @AppStorage("beans.homeGreetingHeight") private var homeGreetingHeight = 0.0
@@ -60,23 +55,12 @@ struct DiscoverView: View {
     @AppStorage("beans.pauseHomeRendering") private var homeRenderingPaused = false
     @AppStorage("beans.homeHeaderHideSort") private var homeHeaderHideSort = false
     @AppStorage("beans.homeHeaderHideRefresh") private var homeHeaderHideRefresh = true
-    @AppStorage("beans.homePlatformHintDismissed") private var homePlatformHintDismissed = false
     @AppStorage("beans.homeWallpaperBlur") private var homeWallpaperBlur = 0.0
-    @AppStorage(PlatformPreferenceStore.hidePickerKey) private var hidePlatformPicker = false
     @AppStorage("beans.uiStyle") private var uiStyleRaw = BeansUIStyle.liquid.rawValue
     @AppStorage("beans.showSongVIPBadge") private var showSongVIPBadge = true
-    private var homeProviders: [SearchProvider] { platformPrefs.enabledSearchProviders }
-    /// 首页数据源：QQ音乐 / 酷狗音乐（与搜索页同一控件样式）
-    private var source: SearchProvider {
-        guard let saved = SearchProvider(rawValue: homeSourceRaw), homeProviders.contains(saved) else {
-            return homeProviders.first ?? .qq
-        }
-        return saved
-    }
     private var isNativeClean: Bool { BeansUIStyle(rawValue: uiStyleRaw) == .nativeClean }
 
     @State private var qqTopLists: [QQTopInfo] = []
-    @State private var kugouTopLists: [KugouTopInfo] = []
     /// 排行榜展开状态：收起显示前 3，展开显示前 10
     @State private var ranksExpanded = false
     /// 歌单广场展开状态：收起显示前 6，展开显示全部
@@ -113,9 +97,6 @@ struct DiscoverView: View {
                     ScrollViewReader { proxy in
                     VStack(alignment: .leading, spacing: isNativeClean ? 34 : 26) {
                         header
-                        if !hidePlatformPicker {
-                            providerPicker
-                        }
                         if let errorMessage {
                             ErrorStateView(message: errorMessage) {
                                 Task { await load(force: true) }
@@ -134,7 +115,7 @@ struct DiscoverView: View {
                                 case "排行榜":
                                     if hasRankData { topListsSection.sectionEntrance(delay: 0.08) }
                                 case "歌单广场":
-                                    if source == .qq || !personalized.isEmpty {
+                                    if !personalized.isEmpty {
                                         personalizedSection.sectionEntrance(delay: 0.16)
                                     }
                                 default:
@@ -156,30 +137,9 @@ struct DiscoverView: View {
                 guard !homeRenderingPaused else { return }
                 await load(force: true)
             }
-            .confirmationDialog("主页平台", isPresented: $showHomePlatformMenu, titleVisibility: .visible) {
-                homePlatformSelectionMenu
-            }
-            .task(id: "\(source.rawValue)-\(homeRenderingPaused)") {
+            .task(id: homeRenderingPaused) {
                 guard !homeRenderingPaused else { return }
                 await load(force: false)
-            }
-            .onAppear {
-                guard !homeRenderingPaused else { return }
-                guard let saved = SearchProvider(rawValue: homeSourceRaw), homeProviders.contains(saved) else {
-                    homeSourceRaw = (homeProviders.first ?? .qq).rawValue
-                    return
-                }
-            }
-            .onReceive(platformPrefs.changes) { _ in
-                guard !homeRenderingPaused else { return }
-                let next = platformPrefs.ensureVisible(source)
-                if next != source {
-                    homeSourceRaw = next.rawValue
-                }
-            }
-            .onChange(of: source) { _ in
-                guard !homeRenderingPaused else { return }
-                homeOrder = SectionOrderStore.load(SectionOrderStore.homeKey, defaults: availableSections)
             }
             .onChange(of: disclaimerAccepted) { accepted in
                 guard !homeRenderingPaused else { return }
@@ -190,23 +150,13 @@ struct DiscoverView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .beansQQLoginDidUpdate)) { _ in
                 guard !homeRenderingPaused else { return }
-                guard platformPrefs.isEnabled(SearchProvider.qq) else { return }
-                reloadAfterLoginUpdate(.qq)
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .beansKugouLoginDidUpdate)) { _ in
-                guard !homeRenderingPaused else { return }
-                guard platformPrefs.isEnabled(SearchProvider.kugou) else { return }
-                reloadAfterLoginUpdate(.kugou)
+                Task { await load(force: true) }
             }
             .sheet(isPresented: $showSectionSort) {
                 SectionOrderSheet(
                     title: "主页板块排序",
                     sections: availableSections,
                     order: $homeOrder,
-                    platformOrder: Binding(
-                        get: { platformPrefs.orderedRaw },
-                        set: { platformPrefs.orderedRaw = $0 }
-                    )
                 )
                     .onDisappear { SectionOrderStore.save(SectionOrderStore.homeKey, homeOrder) }
             }
@@ -225,9 +175,6 @@ struct DiscoverView: View {
                 .environmentObject(player)
         case .qqTopList(let info):
             QQTopListDetailView(topID: info.id, name: info.name)
-                .environmentObject(player)
-        case .kugouTopList(let info):
-            KugouTopListDetailView(topList: info)
                 .environmentObject(player)
         case .dailySongs(let songs):
             DailySongsSheet(songs: songs)
@@ -286,30 +233,9 @@ struct DiscoverView: View {
                                     )
                                     .fixedSize(horizontal: false, vertical: true)
                                     .offset(y: greetingLineOffsetY(index))
-                                if index == 0 && isNativeClean && !homePlatformHintDismissed {
-                                    Button {
-                                        homePlatformHintDismissed = true
-                                        UserDefaults.standard.set(true, forKey: "beans.homePlatformHintDismissed")
-                                    } label: {
-                                        Text("长按这里可切换平台")
-                                            .font(BeansFont.appFont(11, .medium))
-                                            .foregroundStyle(Color.beansComment)
-                                            .fixedSize()
-                                    }
-                                    .buttonStyle(.plain)
-                                    .accessibilityLabel("关闭平台切换提示")
-                                }
                             }
                         }
                     }
-                    .contentShape(Rectangle())
-                    .simultaneousGesture(
-                        LongPressGesture(minimumDuration: 0.55)
-                            .onEnded { _ in
-                                BeansHaptics.select()
-                                showHomePlatformMenu = true
-                            }
-                    )
                     if !homeHideUsername {
                         Group {
                             Text(LocalizedStringKey("发现好音乐"))
@@ -338,53 +264,6 @@ struct DiscoverView: View {
         }
         .padding(.top, isNativeClean ? 4 : 8)
         .frame(minHeight: homeGreetingHeight > 0 ? homeGreetingHeight : nil, alignment: .top)
-    }
-
-    /// 平台选择（QQ音乐 / 酷狗音乐，样式与搜索页一致）
-    private var providerPicker: some View {
-        HStack(spacing: 4) {
-            ForEach(homeProviders) { p in
-                Button {
-                    BeansHaptics.tap()
-                    if source != p { homeSourceRaw = p.rawValue }
-                } label: {
-                    HStack(spacing: 6) {
-                        if let imageName = p.brandImageName {
-                            Image(imageName)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 14, height: 14)
-                        } else {
-                            Image(systemName: p.icon)
-                                .font(.system(size: 11, weight: .semibold))
-                        }
-                        Text(LocalizedStringKey(p.rawValue))
-                            .font(BeansFont.appFont(13, .semibold))
-                    }
-                    .foregroundStyle(source == p ? Color.white : Color.beansComment)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 9)
-                    .background {
-                        if source == p {
-                            Capsule().fill(p.tint)
-                        } else {
-                            Capsule().fill(.clear)
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(4)
-        .background {
-            if isNativeClean {
-                BeansSurface(shape: Capsule())
-            } else {
-                BeansGlass(shape: Capsule())
-            }
-        }
-        .clipShape(Capsule())
-        .beansCardShadow(radius: isNativeClean ? 2 : 6, y: isNativeClean ? 1 : 2)
     }
 
     private var greeting: String {
@@ -420,25 +299,15 @@ struct DiscoverView: View {
         .padding(7)
     }
 
-    /// 每平台排行榜最多 10 个（收起只显示前 3，展开显示前 10）
-    private var visibleRankCount: Int {
-        switch source {
-        case .qq: return qqTopLists.count
-        case .kugou: return kugouTopLists.count
-        }
-    }
+    /// 排行榜最多 10 个（收起只显示前 3，展开显示前 10）
+    private var visibleRankCount: Int { qqTopLists.count }
 
     private var displayedRankCount: Int {
         ranksExpanded ? min(visibleRankCount, 10) : min(visibleRankCount, 3)
     }
 
-    /// 当前平台是否有排行榜数据
-    private var hasRankData: Bool {
-        switch source {
-        case .qq: return !qqTopLists.isEmpty
-        case .kugou: return !kugouTopLists.isEmpty
-        }
-    }
+    /// 是否有排行榜数据
+    private var hasRankData: Bool { !qqTopLists.isEmpty }
 
     // MARK: - 排行榜（竖排行列表）
 
@@ -484,17 +353,9 @@ struct DiscoverView: View {
             SectionHeader(title: "排行榜")
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 16) {
-                    if source == .qq {
-                        ForEach(Array(qqTopLists.prefix(min(visibleRankCount, 10)).enumerated()), id: \.element.id) { index, info in
-                            nativeRankCard(index: index, name: beansChartName(info.name), subtitle: beansChartSubtitle(info.subTitle), coverURL: info.coverURL) {
-                                openRoute(DiscoverRoute.qqTopList(info))
-                            }
-                        }
-                    } else {
-                        ForEach(Array(kugouTopLists.prefix(min(visibleRankCount, 10)).enumerated()), id: \.element.id) { index, info in
-                            nativeRankCard(index: index, name: beansChartName(info.name), subtitle: beansChartSubtitle(info.updateFrequency), coverURL: info.coverURL) {
-                                openRoute(DiscoverRoute.kugouTopList(info))
-                            }
+                    ForEach(Array(qqTopLists.prefix(min(visibleRankCount, 10)).enumerated()), id: \.element.id) { index, info in
+                        nativeRankCard(index: index, name: beansChartName(info.name), subtitle: beansChartSubtitle(info.subTitle), coverURL: info.coverURL) {
+                            openRoute(DiscoverRoute.qqTopList(info))
                         }
                     }
                 }
@@ -544,24 +405,12 @@ struct DiscoverView: View {
     /// 排行榜行列表（按平台渲染）
     @ViewBuilder
     private var rankRowsContent: some View {
-        if source == .qq {
-            ForEach(Array(qqTopLists.prefix(displayedRankCount).enumerated()), id: \.element.id) { index, info in
-                rankRow(index: index, name: beansChartName(info.name), subtitle: beansChartSubtitle(info.subTitle), coverURL: info.coverURL) {
-                    BeansHaptics.tap()
-                    openRoute(DiscoverRoute.qqTopList(info))
-                }
-                Divider().overlay(Color.beansComment.opacity(0.12))
+        ForEach(Array(qqTopLists.prefix(displayedRankCount).enumerated()), id: \.element.id) { index, info in
+            rankRow(index: index, name: beansChartName(info.name), subtitle: beansChartSubtitle(info.subTitle), coverURL: info.coverURL) {
+                BeansHaptics.tap()
+                openRoute(DiscoverRoute.qqTopList(info))
             }
-        } else if source == .kugou {
-            ForEach(Array(kugouTopLists.prefix(displayedRankCount).enumerated()), id: \.element.id) { index, info in
-                rankRow(index: index, name: beansChartName(info.name), subtitle: beansChartSubtitle(info.updateFrequency), coverURL: info.coverURL) {
-                    BeansHaptics.tap()
-                    openRoute(DiscoverRoute.kugouTopList(info))
-                }
-                Divider().overlay(Color.beansComment.opacity(0.12))
-            }
-        } else {
-            EmptyView()
+            Divider().overlay(Color.beansComment.opacity(0.12))
         }
     }
 
@@ -634,45 +483,7 @@ struct DiscoverView: View {
 
     @ViewBuilder
     private var dailySection: some View {
-        if source == .kugou {
-            kugouRecommendationCards
-        } else {
-            dailySongCards
-        }
-    }
-
-    private var kugouRecommendationCards: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "推荐")
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 14) {
-                    recommendationCard(
-                        title: "每日推荐",
-                        subtitle: dailyRecommendationSubtitle,
-                        icon: "calendar",
-                        coverURL: dailySongs.first?.coverURL,
-                        gradient: [Color(red: 0.95, green: 0.36, blue: 0.28), Color(red: 0.96, green: 0.68, blue: 0.30)],
-                        loadingKey: nil
-                    ) {
-                        BeansHaptics.tap()
-                        openRoute(DiscoverRoute.dailySongs(dailySongs))
-                    }
-
-                    recommendationCard(
-                        title: "私人漫游",
-                        subtitle: "从喜欢的歌开始漫游",
-                        icon: "wave.3.right.circle.fill",
-                        coverURL: nil,
-                        gradient: [Color(red: 0.08, green: 0.46, blue: 0.82), Color(red: 0.18, green: 0.72, blue: 0.72)],
-                        loadingKey: "kugouFM"
-                    ) {
-                        startKugouPersonalFM()
-                    }
-                }
-                .padding(.vertical, 3)
-            }
-            .padding(.trailing, isNativeClean ? -24 : 0)
-        }
+        dailySongCards
     }
 
     private var dailySongCards: some View {
@@ -817,47 +628,6 @@ struct DiscoverView: View {
         .disabled(loadingKey != nil && recommendationActionLoading != nil)
     }
 
-    private func startKugouPersonalFM() {
-        guard KugouMusicAuth.shared.isLoggedIn else {
-            ToastCenter.shared.show("请先登录酷狗音乐")
-            return
-        }
-        guard recommendationActionLoading == nil else { return }
-        recommendationActionLoading = "kugouFM"
-        Task {
-            defer { Task { @MainActor in recommendationActionLoading = nil } }
-            do {
-                let songs = try await KugouMusicAPI.shared.personalFM(limit: 12)
-                await MainActor.run {
-                    if songs.isEmpty {
-                        ToastCenter.shared.show("私人漫游暂时没有推荐")
-                    } else {
-                        player.play(songs: songs, startAt: 0)
-                        ToastCenter.shared.show("已开启私人漫游")
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    BeansLogger.shared.log("酷狗私人漫游加载失败：\(error.localizedDescription)", level: .error)
-                    ToastCenter.shared.show("私人漫游加载失败")
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var homePlatformSelectionMenu: some View {
-        let current = SearchProvider(rawValue: homeSourceRaw) ?? homeProviders.first ?? .qq
-        ForEach(homeProviders) { provider in
-            Button {
-                BeansHaptics.select()
-                homeSourceRaw = provider.rawValue
-            } label: {
-                Label(LocalizedStringKey(provider.rawValue), systemImage: provider == current ? "checkmark" : provider.icon)
-            }
-        }
-    }
-
     // MARK: - 歌单广场（官方分类 + 双列网格）
 
     private var personalizedSection: some View {
@@ -957,19 +727,9 @@ struct DiscoverView: View {
         }
     }
 
-    private var playlistSectionTitle: String {
-        switch source {
-        case .qq: return "QQ音乐热门歌单"
-        case .kugou: return "歌单广场"
-        }
-    }
+    private var playlistSectionTitle: String { "QQ音乐热门歌单" }
 
-    private var playlistEmptyText: String {
-        switch source {
-        case .qq: return "QQ音乐热门歌单暂未加载成功\n下拉刷新可重新获取"
-        case .kugou: return "歌单广场暂时没有内容"
-        }
-    }
+    private var playlistEmptyText: String { "QQ音乐热门歌单暂未加载成功\n下拉刷新可重新获取" }
 
     private var collapsedPlaylistCount: Int { 6 }
 
@@ -983,8 +743,7 @@ struct DiscoverView: View {
     private func load(force: Bool = false) async {
         guard !homeRenderingPaused else { return }
         let cache = DiscoverCache.shared
-        let requestedSource = source
-        let loadKey = requestedSource.rawValue
+        let loadKey = "qq"
         if activeLoadKey == loadKey {
             return
         }
@@ -1003,8 +762,8 @@ struct DiscoverView: View {
             }
         }
         let cacheable = true
-        if let cached = cache.cached(for: requestedSource), !force, cacheable {
-            guard !Task.isCancelled, requestedSource == source else { return }
+        if let cached = cache.cached(), !force, cacheable {
+            guard !Task.isCancelled else { return }
             apply(cached)
             loading = false
             errorMessage = nil
@@ -1018,18 +777,18 @@ struct DiscoverView: View {
         }
 
         do {
-            let snapshot = try await fetchSnapshot(for: requestedSource)
-            guard !Task.isCancelled, requestedSource == source else { return }
+            let snapshot = try await fetchSnapshot()
+            guard !Task.isCancelled else { return }
             apply(snapshot)
             if cacheable, !snapshot.isEmpty {
-                cache.save(snapshot, for: requestedSource)
+                cache.save(snapshot)
             }
             loading = false
             errorMessage = nil
             lastLoadedKey = loadKey
             lastLoadedAt = Date()
         } catch {
-            guard !Task.isCancelled, requestedSource == source else { return }
+            guard !Task.isCancelled else { return }
             loading = false
             if !hasAnyData {
                 errorMessage = error.localizedDescription
@@ -1104,51 +863,25 @@ struct DiscoverView: View {
         }
     }
 
-    private func reloadAfterLoginUpdate(_ provider: SearchProvider) {
-        if source == provider {
-            Task { await load(force: true) }
-        } else {
-            homeSourceRaw = provider.rawValue
-        }
-    }
-
     private var homeGreetingColor: Color {
         if let color = Color(hex: homeGreetingColorHex) { return color }
         return Color.beansLabel
     }
 
-    private func fetchSnapshot(for source: SearchProvider) async throws -> DiscoverCache.Snapshot {
+    private func fetchSnapshot() async throws -> DiscoverCache.Snapshot {
         var snapshot = DiscoverCache.Snapshot()
         snapshot.savedAt = Date()
-        switch source {
-        case .qq:
-            async let a: [Song] = (try? await QQMusicAPI.shared.recommendSongs(limit: 30)) ?? []
-            async let b: [QQTopInfo] = (try? await QQMusicAPI.shared.topLists()) ?? []
-            async let c: [Playlist] = (try? await QQMusicAPI.shared.hotPlaylists(limit: 18)) ?? []
-            let (dr, tl, pp) = await (a, b, c)
-            if pp.isEmpty {
-                BeansLogger.shared.log("QQ音乐热门歌单为空：保留板块并显示空状态", level: .warn)
-            }
-            snapshot.dailySongs = dr
-            snapshot.qqTopLists = tl
-            snapshot.personalized = pp
-        case .kugou:
-            async let songs = loadKugouDailySongs(limit: 30)
-            async let ranks = KugouMusicAPI.shared.topLists(limit: 10)
-            async let playlists = KugouMusicAPI.shared.recommendPlaylists(limit: 12)
-            let (daily, top, pp) = try await (songs, ranks, playlists)
-            snapshot.dailySongs = daily
-            snapshot.kugouTopLists = top
-            snapshot.personalized = pp
+        async let a: [Song] = (try? await QQMusicAPI.shared.recommendSongs(limit: 30)) ?? []
+        async let b: [QQTopInfo] = (try? await QQMusicAPI.shared.topLists()) ?? []
+        async let c: [Playlist] = (try? await QQMusicAPI.shared.hotPlaylists(limit: 18)) ?? []
+        let (dr, tl, pp) = await (a, b, c)
+        if pp.isEmpty {
+            BeansLogger.shared.log("QQ音乐热门歌单为空：保留板块并显示空状态", level: .warn)
         }
+        snapshot.dailySongs = dr
+        snapshot.qqTopLists = tl
+        snapshot.personalized = pp
         return snapshot
-    }
-
-    private func loadKugouDailySongs(limit: Int) async -> [Song] {
-        if let songs = try? await KugouMusicAPI.shared.everydayRecommend(limit: limit), !songs.isEmpty {
-            return songs
-        }
-        return (try? await KugouMusicAPI.shared.searchSongs(keyword: "热门歌曲", limit: limit)) ?? []
     }
 
     @MainActor
@@ -1156,12 +889,10 @@ struct DiscoverView: View {
         dailySongs = snapshot.dailySongs
         personalized = snapshot.personalized
         qqTopLists = snapshot.qqTopLists
-        kugouTopLists = snapshot.kugouTopLists
     }
 
     private var hasAnyData: Bool {
-        !dailySongs.isEmpty || !personalized.isEmpty
-            || !qqTopLists.isEmpty || !kugouTopLists.isEmpty
+        !dailySongs.isEmpty || !personalized.isEmpty || !qqTopLists.isEmpty
     }
 }
 
@@ -1430,156 +1161,10 @@ struct DailySongsSheet: View {
         }
     }
 }
-// MARK: - 酷狗排行榜详情
-
-struct KugouTopListDetailView: View {
-    @EnvironmentObject private var player: PlayerManager
-    @EnvironmentObject private var theme: ThemeStore
-    @Environment(\.dismiss) private var dismiss
-
-    let topList: KugouTopInfo
-    @State private var tracks: [Song] = []
-    @State private var loading = true
-    @State private var errorMessage: String?
-    @State private var searchText = ""
-
-    init(topList: KugouTopInfo) {
-        self.topList = topList
-    }
-
-    var body: some View {
-        let _ = theme.accent
-        ZStack {
-                GlassBackdrop(customColor: theme.backgroundSyncAll ? theme.customBackground : nil)
-                Group {
-                if loading {
-                    LoadingStateView()
-                } else if let errorMessage {
-                    ErrorStateView(message: errorMessage) {
-                        Task { await load() }
-                    }
-                } else if tracks.isEmpty {
-                    EmptyStateView(icon: "music.note.list", text: beansLocalized("该排行榜暂无歌曲", "This chart has no songs yet"))
-                } else {
-                    List {
-                        header
-                        Section {
-                            HStack(spacing: 12) {
-                                GlassButton(title: "播放全部", systemName: "play.fill", prominent: true) {
-                                    guard !filteredTracks.isEmpty else { return }
-                                    BeansHaptics.tap()
-                                    player.play(songs: filteredTracks, startAt: 0)
-                                }
-                                GlassButton(title: "随机播放", systemName: "shuffle") {
-                                    guard !filteredTracks.isEmpty else { return }
-                                    BeansHaptics.tap()
-                                    player.play(songs: filteredTracks, startAt: Int.random(in: 0..<filteredTracks.count))
-                                }
-                            }
-                            .listRowBackground(Color.clear)
-                            .padding(.vertical, 8)
-                        }
-                        Section {
-                            ForEach(Array(filteredTracks.enumerated()), id: \.element.identityKey) { index, song in
-                                SongCell(song: song, glassRow: true) {
-                                    player.play(songs: filteredTracks, startAt: index)
-                                }
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                            }
-                        }
-                    }
-                    .beansScrollContentBackgroundHidden()
-                    .listStyle(.plain)
-                }
-            }
-            }
-            .navigationTitle(beansChartName(topList.name))
-            .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: beansLocalized("搜索榜单歌曲", "Search chart songs"))
-        .task { await load() }
-    }
-
-    private var header: some View {
-        HStack(spacing: 14) {
-            CoverImage(url: topList.coverURL, size: 88, cornerRadius: 8)
-            VStack(alignment: .leading, spacing: 6) {
-                Text(beansChartName(topList.name))
-                    .font(BeansFont.appFont(18, .bold))
-                    .foregroundStyle(Color.beansLabel)
-                    .lineLimit(2)
-                if !topList.updateFrequency.isEmpty {
-                    Text(beansChartSubtitle(topList.updateFrequency))
-                        .font(BeansFont.appFont(12))
-                        .foregroundStyle(Color.beansComment)
-                }
-                Text(beansSongCountText(tracks.count))
-                    .font(BeansFont.appFont(12))
-                    .foregroundStyle(Color.beansComment)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(14)
-        .background {
-            BeansGlass(shape: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        }
-        .beansCardShadow(radius: 8, y: 3)
-        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
-    }
-
-    private var filteredTracks: [Song] {
-        let kw = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !kw.isEmpty else { return tracks }
-        return tracks.filter { song in
-            song.name.lowercased().contains(kw)
-                || song.artists.lowercased().contains(kw)
-                || song.album.lowercased().contains(kw)
-        }
-    }
-
-    @MainActor
-    private func load() async {
-        let cache = DetailSongsCache.shared
-        let cacheKey = "kugou-top-\(topList.id)"
-        if let cached = cache.cachedSongs(for: cacheKey) {
-            tracks = cached.songs
-            loading = false
-            errorMessage = nil
-            if cache.isFresh(cached) {
-                return
-            }
-        } else {
-            loading = true
-            errorMessage = nil
-        }
-        do {
-            let songs = try await KugouMusicAPI.shared.rankSongs(rankID: topList.id)
-            if !songs.isEmpty {
-                tracks = songs
-                cache.save(songs, for: cacheKey)
-            }
-            loading = false
-        } catch {
-            if tracks.isEmpty {
-                errorMessage = error.localizedDescription
-            } else {
-                BeansLogger.shared.log(
-                    "酷狗排行榜详情后台刷新失败，继续使用缓存 id=\(topList.id) error=\(error.localizedDescription)",
-                    level: .warn
-                )
-            }
-            loading = false
-        }
-    }
-}
-
 private struct HomeUnifiedSearchSheet: View {
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var player: PlayerManager
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject private var platformPrefs = PlatformPreferenceStore.shared
 
     @State private var keyword = ""
     @State private var results: [Song] = []
@@ -1588,10 +1173,6 @@ private struct HomeUnifiedSearchSheet: View {
     @State private var searchTask: Task<Void, Never>?
     @State private var debounceTask: Task<Void, Never>?
     @State private var searchController = SearchFieldController()
-
-    private var providers: [SearchProvider] {
-        platformPrefs.enabledSearchProviders
-    }
 
     var body: some View {
         BeansNavigationStack {
@@ -1606,7 +1187,7 @@ private struct HomeUnifiedSearchSheet: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
-            .navigationTitle("全平台搜索")
+            .navigationTitle("搜索")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -1710,7 +1291,7 @@ private struct HomeUnifiedSearchSheet: View {
     @ViewBuilder
     private var content: some View {
         if keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            EmptyStateView(icon: "magnifyingglass", text: beansLocalized("输入歌名后会同时搜索QQ音乐和酷狗音乐", "Search QQ Music and Kugou simultaneously"))
+            EmptyStateView(icon: "magnifyingglass", text: beansLocalized("输入歌名后搜索 QQ 音乐", "Search QQ Music by song title"))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let errorMessage, results.isEmpty {
             ErrorStateView(message: errorMessage) {
@@ -1727,7 +1308,7 @@ private struct HomeUnifiedSearchSheet: View {
             ScrollView {
                 LazyVStack(spacing: 8) {
                     HStack(spacing: 8) {
-                        Text(beansLocalized("找到 \(results.count) 首 · 全平台", "Found \(results.count) songs · All Platforms"))
+                        Text(beansLocalized("找到 \(results.count) 首", "Found \(results.count) songs"))
                             .font(BeansFont.appFont(12))
                             .foregroundStyle(Color.beansComment)
                             .lineLimit(1)
@@ -1785,31 +1366,17 @@ private struct HomeUnifiedSearchSheet: View {
             BeansLogger.shared.log("主页聚合搜索：\(trimmed)", level: .info)
             defer { if !Task.isCancelled { searching = false } }
 
-            let enabledProviders = providers
-            async let qq: [Song] = searchSongs(on: .qq, keyword: trimmed, enabledProviders: enabledProviders)
-            async let kugou: [Song] = searchSongs(on: .kugou, keyword: trimmed, enabledProviders: enabledProviders)
-
-            let merged = await (qq + kugou)
+            let songs = (try? await QQMusicAPI.shared.searchSongs(keyword: trimmed, limit: 30)) ?? []
             guard !Task.isCancelled else { return }
-            results = deduplicated(merged)
+            results = deduplicated(songs)
             if results.isEmpty {
-                errorMessage = "两个平台都没有返回可展示的歌曲"
+                errorMessage = "QQ 音乐没有返回可展示的歌曲"
             } else {
                 BeansHaptics.success()
             }
             BeansLogger.shared.log("主页聚合搜索完成：\(trimmed) 结果=\(results.count)", level: .info)
         }
         await searchTask?.value
-    }
-
-    private func searchSongs(on provider: SearchProvider, keyword: String, enabledProviders: [SearchProvider]) async -> [Song] {
-        guard enabledProviders.contains(provider) else { return [] }
-        switch provider {
-        case .qq:
-            return (try? await QQMusicAPI.shared.searchSongs(keyword: keyword, limit: 30)) ?? []
-        case .kugou:
-            return (try? await KugouMusicAPI.shared.searchSongs(keyword: keyword, limit: 30)) ?? []
-        }
     }
 
     private func deduplicated(_ songs: [Song]) -> [Song] {

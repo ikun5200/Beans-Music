@@ -6,7 +6,7 @@ This repository contains the public iOS client.
 
 ## Highlights
 
-- QQ Music and Kugou Music browsing and search
+- QQ Music browsing and search with built-in Linglan playback fallback
 - Account login, synced playlists, favorites, rankings, artists, albums, and recent plays
 - Playback queue, shuffle, repeat, playback speed, sleep timer, background playback, and lock-screen controls
 - Lyrics with translation, appearance controls, scrolling, and interactive seeking
@@ -27,7 +27,6 @@ Beans/
   PlayerView.swift            Full player and lyrics experience
   PlayerManager.swift         Queue, playback, history, and recovery
   QQMusicAPI.swift            QQ Music integration
-  KugouMusicAPI.swift         Kugou integration
   UnblockService.swift        User-configured source resolution
   DownloadManager.swift       Audio download and export
   Theme.swift                 Theme and wallpaper state
