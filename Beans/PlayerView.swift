@@ -6,7 +6,6 @@ struct PlayerView: View {
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var clock: PlaybackClock
-    @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var favorites: FavoritesStore
     @ObservedObject private var localLibrary = LocalLibraryStore.shared
     @Environment(\.colorScheme) private var colorScheme
@@ -17,7 +16,6 @@ struct PlayerView: View {
     @AppStorage("beans.player.lastLyricsPage") private var lastLyricsPage = false
     @State private var showQueue = false
     @State private var showSleepTimer = false
-    @State private var showAddToPlaylist = false
     @State private var showComments = false
     @State private var showDownloadPicker = false
     @State private var showMoreActions = false
@@ -593,12 +591,6 @@ struct PlayerView: View {
                 .environmentObject(theme)
         }
         .sheet(isPresented: $showSleepTimer) { SleepTimerSheet().environmentObject(player) }
-        .sheet(isPresented: $showAddToPlaylist) {
-            if let song {
-                AddToPlaylistSheet(song: song)
-                    .environmentObject(auth)
-            }
-        }
         .sheet(isPresented: $showComments) {
             if let song {
                 CommentsSheet(song: song)
@@ -630,7 +622,7 @@ struct PlayerView: View {
         }
         .sheet(isPresented: $showArtistHome) {
             if !pickedArtistName.isEmpty {
-                ArtistHomeSheet(artistName: pickedArtistName, artistSource: song?.source ?? .netease)
+                ArtistHomeSheet(artistName: pickedArtistName, artistSource: song?.source ?? .qq)
                     .environmentObject(player)
             }
         }
@@ -2777,11 +2769,9 @@ struct PlayerView: View {
         return [text]
     }
 
-    /// 各平台歌曲链接（网易云 / QQ音乐 / 酷狗音乐）
+    /// 各平台歌曲链接（QQ音乐 / 酷狗音乐）
     private func shareURL(for song: Song) -> URL? {
         switch song.source {
-        case .netease:
-            return URL(string: "https://music.163.com/#/song?id=\(song.id)")
         case .qq:
             if let mid = song.qqMid, !mid.isEmpty {
                 return URL(string: "https://y.qq.com/n/ryqq/songDetail/\(mid)")
@@ -2927,10 +2917,6 @@ struct PlayerView: View {
         } else if song.source == .qq, let mid = song.qqMid {
             if let raw = try? await QQMusicAPI.shared.lyric(songmid: mid) {
                 apply(LyricParser.parse(raw))
-            }
-        } else {
-            if let (lrc, tlyric) = try? await NetEaseAPI.shared.lyricWithTranslation(id: song.id) {
-                apply(LyricParser.parse(lrc ?? "", translationRaw: tlyric))
             }
         }
     }
@@ -4371,7 +4357,7 @@ struct PlayerSettingsSheet: View {
             }
             Divider().opacity(0.5)
             settingToggle("显示歌词翻译", isOn: $lyricTranslation,
-                          caption: "当前播放歌词下方显示译文（网易云 tlyric）")
+                          caption: "当前播放歌词下方显示译文")
         }
     }
 

@@ -31,7 +31,7 @@ final class QQMusicAPI {
     // MARK: - 基础请求
 
     private func get(_ urlString: String, referer: String = "https://y.qq.com/", cookie: String = "") async throws -> [String: Any] {
-        guard let url = URL(string: urlString) else { throw NetEaseError.unknown("请求地址无效") }
+        guard let url = URL(string: urlString) else { throw MusicAPIError.unknown("请求地址无效") }
         let startedAt = Date()
         BeansLogger.shared.log("QQ HTTP GET 开始 url=\(Self.sanitizedURL(urlString)) referer=\(referer) cookie=\(Self.cookieSummary(cookie))", level: .debug)
         var request = URLRequest(url: url)
@@ -44,12 +44,12 @@ final class QQMusicAPI {
             BeansLogger.shared.log("QQ HTTP GET 完成 status=\(status) bytes=\(data.count) elapsed=\(Self.elapsed(startedAt))", level: .debug)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
                 BeansLogger.shared.log("QQ HTTP GET 非 200 status=\(status) response=\(Self.responseSummary(data))", level: .warn)
-                throw NetEaseError.network
+                throw MusicAPIError.network
             }
             guard let json = parseJSON(data) else {
                 BeansLogger.shared.log("QQ HTTP GET JSON 解析失败 response=\(Self.responseSummary(data))", level: .error)
                 let snippet = String(data: data, encoding: .utf8)?.prefix(120) ?? ""
-                throw NetEaseError.decoding(String(snippet))
+                throw MusicAPIError.decoding(String(snippet))
             }
             BeansLogger.shared.log("QQ HTTP GET JSON 结构 \(Self.jsonSummary(json))", level: .debug)
             return json
@@ -63,7 +63,7 @@ final class QQMusicAPI {
     private func musicu(_ payload: [String: Any], cookie: String = "", timeout: TimeInterval = 6) async throws -> [String: Any] {
         guard let body = try? JSONSerialization.data(withJSONObject: payload),
               let url = URL(string: base) else {
-            throw NetEaseError.unknown("请求参数错误")
+            throw MusicAPIError.unknown("请求参数错误")
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -84,12 +84,12 @@ final class QQMusicAPI {
             BeansLogger.shared.log("QQ musicu POST 完成 status=\(status) bytes=\(data.count) elapsed=\(Self.elapsed(startedAt))", level: .debug)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
                 BeansLogger.shared.log("QQ musicu 非 200 status=\(status) response=\(Self.responseSummary(data))", level: .warn)
-                throw NetEaseError.network
+                throw MusicAPIError.network
             }
             guard let json = parseJSON(data) else {
                 BeansLogger.shared.log("QQ musicu JSON 解析失败 response=\(Self.responseSummary(data))", level: .error)
                 let snippet = String(data: data, encoding: .utf8)?.prefix(120) ?? ""
-                throw NetEaseError.decoding(String(snippet))
+                throw MusicAPIError.decoding(String(snippet))
             }
             BeansLogger.shared.log("QQ musicu JSON 结构 \(Self.jsonSummary(json))", level: .debug)
             return json
@@ -101,7 +101,7 @@ final class QQMusicAPI {
 
     /// 表单 POST（fcg 老接口统一走这里，如 H5 评论接口）
     private func postForm(_ urlString: String, body: [String: Any], referer: String = "https://y.qq.com/", cookie: String = "") async throws -> [String: Any] {
-        guard let url = URL(string: urlString) else { throw NetEaseError.unknown("请求地址无效") }
+        guard let url = URL(string: urlString) else { throw MusicAPIError.unknown("请求地址无效") }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
@@ -113,11 +113,11 @@ final class QQMusicAPI {
         request.httpBody = comps.query?.data(using: .utf8)
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            throw NetEaseError.network
+            throw MusicAPIError.network
         }
         guard let json = parseJSON(data) else {
             let snippet = String(data: data, encoding: .utf8)?.prefix(120) ?? ""
-            throw NetEaseError.decoding(String(snippet))
+            throw MusicAPIError.decoding(String(snippet))
         }
         return json
     }
@@ -206,7 +206,7 @@ final class QQMusicAPI {
         let pageSize = max(limit, 1)
         let page = max(offset, 0) / pageSize + 1
         guard let url = clientSearchURL(keyword: keyword, limit: pageSize, type: 0, page: page) else {
-            throw NetEaseError.unknown("搜索地址无效")
+            throw MusicAPIError.unknown("搜索地址无效")
         }
         let json = try await get(url.absoluteString, referer: "https://y.qq.com/portal/player.html")
         let data = json["data"] as? [String: Any] ?? [:]
@@ -1462,7 +1462,7 @@ final class QQMusicAPI {
     /// 比旧的 RecommendPlaylist musicu 接口更接近官网实际展示内容。
     func hotPlaylists(limit: Int = 18) async throws -> [Playlist] {
         guard let url = URL(string: "https://y.qq.com/") else {
-            throw NetEaseError.unknown("QQ 音乐官网地址无效")
+            throw MusicAPIError.unknown("QQ 音乐官网地址无效")
         }
         var request = URLRequest(url: url)
         request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 QQMusic/9.0.5", forHTTPHeaderField: "User-Agent")
@@ -1473,7 +1473,7 @@ final class QQMusicAPI {
         let status = (response as? HTTPURLResponse)?.statusCode ?? -1
         guard status == 200, let html = String(data: data, encoding: .utf8) else {
             BeansLogger.shared.log("QQ 官网热门歌单加载失败 status=\(status) bytes=\(data.count)", level: .error)
-            throw NetEaseError.network
+            throw MusicAPIError.network
         }
 
         if let initialData = Self.initialData(from: html) {
@@ -1497,7 +1497,7 @@ final class QQMusicAPI {
 
         let pattern = #""imgurl"\s*:\s*"([^"]+)".*?"dissname"\s*:\s*"([^"]*)".*?"listennum"\s*:\s*([0-9]+).*?"dissid"\s*:\s*([0-9]+)"#
         guard let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]) else {
-            throw NetEaseError.decoding("QQ 官网热门歌单解析器初始化失败")
+            throw MusicAPIError.decoding("QQ 官网热门歌单解析器初始化失败")
         }
         let range = NSRange(html.startIndex..<html.endIndex, in: html)
         var playlists: [Playlist] = []

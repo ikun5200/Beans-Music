@@ -280,7 +280,7 @@ final class QQMusicAuth: ObservableObject {
         let (data, response) = try await session.data(for: request)
         collectCookies(from: response)
         guard let qr = cookies["qrsig"], !qr.isEmpty else {
-            throw NetEaseError.unknown("获取 QQ 二维码失败，请检查网络后重试")
+            throw MusicAPIError.unknown("获取 QQ 二维码失败，请检查网络后重试")
         }
         qrsig = qr
         return data
@@ -414,7 +414,7 @@ final class QQMusicAuth: ObservableObject {
         guard let http = authResponse as? HTTPURLResponse,
               let location = http.value(forHTTPHeaderField: "Location"),
               let code = Self.extractCode(from: location) else {
-            throw NetEaseError.unknown("QQ 授权失败，请重新扫码")
+            throw MusicAPIError.unknown("QQ 授权失败，请重新扫码")
         }
 
         // 3. musicu.fcg QQConnectLogin 换 musickey（登录态 Cookie 持久化）
@@ -571,7 +571,7 @@ final class QQMusicAuth: ObservableObject {
     private func musicu(_ payload: [String: Any]) async throws -> [String: Any] {
         guard let body = try? JSONSerialization.data(withJSONObject: payload),
               let url = URL(string: "https://u.y.qq.com/cgi-bin/musicu.fcg") else {
-            throw NetEaseError.unknown("请求参数错误")
+            throw MusicAPIError.unknown("请求参数错误")
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -583,7 +583,7 @@ final class QQMusicAuth: ObservableObject {
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200,
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw NetEaseError.network
+            throw MusicAPIError.network
         }
         return obj
     }

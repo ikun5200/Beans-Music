@@ -438,7 +438,6 @@ extension View {
 }
 
 private struct BeansDetailMiniPlayerModifier: ViewModifier {
-    @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var theme: ThemeStore
     @ObservedObject private var favorites = FavoritesStore.shared

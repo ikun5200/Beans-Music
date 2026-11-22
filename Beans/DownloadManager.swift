@@ -12,16 +12,6 @@ extension ThirdPartyAudioQuality {
 
     var label: String { displayName }
 
-    /// 网易云 player/url 的 level 参数。
-    var neteaseLevel: String {
-        switch self {
-        case .kb128: return "standard"
-        case .kb320: return "exhigh"
-        case .flac: return "lossless"
-        case .flac24bit, .hires, .atmos, .atmosPlus, .master: return "hires"
-        }
-    }
-
     /// QQ vkey 的 br 参数。高于 FLAC 的档位使用无损请求，第三方接口仍会
     /// 收到原始质量名称并负责按能力降级。
     var qqBR: String {
@@ -77,7 +67,7 @@ final class DownloadManager {
     @discardableResult
     func download(song: Song, quality: DownloadQuality) async -> Result<DownloadResult, Error> {
         let chain = quality.fallbackChain
-        var lastError: Error = NetEaseError.unknown("下载失败")
+        var lastError: Error = MusicAPIError.unknown("下载失败")
         BeansLogger.shared.log(
             "下载开始：\(song.name) 平台=\(song.source.rawValue) 请求音质=\(quality.rawValue)",
             level: .info
@@ -86,7 +76,7 @@ final class DownloadManager {
         for (index, current) in chain.enumerated() {
             // 1) 解析播放地址（与播放共用同一套接口，仅指定当前下载音质）
             guard let resolved = await resolveURL(song: song, quality: current) else {
-                lastError = NetEaseError.unknown("无法解析播放地址（可能为 VIP 歌曲或音源不可用）")
+                lastError = MusicAPIError.unknown("无法解析播放地址（可能为 VIP 歌曲或音源不可用）")
                 continue
             }
 
@@ -98,11 +88,11 @@ final class DownloadManager {
                 let (downloaded, downloadResponse) = try await URLSession.shared.download(for: request)
                 response = downloadResponse
                 if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-                    lastError = NetEaseError.unknown("下载失败（HTTP \(http.statusCode)）")
+                    lastError = MusicAPIError.unknown("下载失败（HTTP \(http.statusCode)）")
                     continue
                 }
                 guard isUsableAudioFile(at: downloaded, response: response) else {
-                    lastError = NetEaseError.unknown("返回内容不是有效音频")
+                    lastError = MusicAPIError.unknown("返回内容不是有效音频")
                     BeansLogger.shared.log(
                         "下载音频校验失败，继续尝试降级：\(song.name) 平台=\(song.source.rawValue) 音质=\(current.rawValue) MIME=\(response.mimeType ?? "未知")",
                         level: .debug
@@ -112,7 +102,7 @@ final class DownloadManager {
                 }
                 tempURL = downloaded
             } catch {
-                lastError = NetEaseError.unknown("下载失败：\(error.localizedDescription)")
+                lastError = MusicAPIError.unknown("下载失败：\(error.localizedDescription)")
                 continue
             }
 
@@ -130,7 +120,7 @@ final class DownloadManager {
             do {
                 try FileManager.default.moveItem(at: tempURL, to: dest)
             } catch {
-                lastError = NetEaseError.unknown("保存失败：\(error.localizedDescription)")
+                lastError = MusicAPIError.unknown("保存失败：\(error.localizedDescription)")
                 continue
             }
             let downgraded = index > 0 || actualQuality != quality
@@ -157,12 +147,12 @@ final class DownloadManager {
 
     private func resolveURL(song: Song, quality: DownloadQuality) async -> ResolvedDownloadURL? {
         // 下载优先复用已配置的第三方音源，避免播放能用第三方而下载仍走官方地址。
-        let thirdPartyID = song.source == .netease ? song.id : 0
+        let thirdPartyID = song.source == .qq ? song.id : 0
         let thirdPartyKugouID = song.kugouHash ?? song.kugouAlbumAudioId
         if let resolved = await UnblockService.resolve(
             name: song.name,
             artists: song.artists,
-            neteaseID: thirdPartyID,
+            songID: thirdPartyID,
             songSource: song.source,
             qqMid: song.qqMid,
             qqMediaMid: song.qqMediaMid,
@@ -195,10 +185,6 @@ final class DownloadManager {
         } else if song.source == .kugou {
             guard let urlString = try? await KugouMusicAPI.shared.songURL(song: song, quality: quality.beansQuality),
                   let url = URL(string: urlString) else { return nil }
-            return ResolvedDownloadURL(url: url, actualQuality: quality, sourceName: nil)
-        } else {
-            let urls = try? await NetEaseAPI.shared.songURLs(ids: [song.id], level: quality.neteaseLevel)
-            guard let urlString = urls?[song.id], let url = URL(string: urlString) else { return nil }
             return ResolvedDownloadURL(url: url, actualQuality: quality, sourceName: nil)
         }
     }

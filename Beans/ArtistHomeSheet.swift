@@ -7,7 +7,7 @@ struct ArtistHomeSheet: View {
     @EnvironmentObject private var player: PlayerManager
     @Environment(\.dismiss) private var dismiss
     let artistName: String
-    var artistSource: SongSource = .netease
+    var artistSource: SongSource = .qq
     var artistID: String?
 
     init(artist: Artist) {
@@ -17,7 +17,7 @@ struct ArtistHomeSheet: View {
         _artist = State(initialValue: artist)
     }
 
-    init(artistName: String, artistSource: SongSource = .netease) {
+    init(artistName: String, artistSource: SongSource = .qq) {
         self.artistName = artistName
         self.artistSource = artistSource
         self.artistID = nil
@@ -48,9 +48,6 @@ struct ArtistHomeSheet: View {
                             VStack(alignment: .leading, spacing: 14) {
                                 artistHeader
                                 hotSongsSection
-                                if artistSource == .netease {
-                                    albumsSection
-                                }
                             }
                             .padding(.top, 6)
                             .padding(.bottom, 16)
@@ -93,9 +90,7 @@ struct ArtistHomeSheet: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                Text(artistSource == .netease
-                     ? beansLocalized("热门歌曲 \(hotSongs.count) 首 · 专辑 \(albums.count) 张", "Popular songs: \(hotSongs.count) · Albums: \(albums.count)")
-                     : beansLocalized("热门歌曲 \(hotSongs.count) 首", "Popular songs: \(hotSongs.count)"))
+                Text(beansLocalized("热门歌曲 \(hotSongs.count) 首", "Popular songs: \(hotSongs.count)"))
                     .font(BeansFont.appFont(12))
                     .foregroundStyle(Color.beansComment)
             }
@@ -235,112 +230,17 @@ struct ArtistHomeSheet: View {
         }
     }
 
-    private var albumsSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("专辑")
-                .font(BeansFont.appFont(17, .bold))
-                .foregroundStyle(Color.beansLabel)
-                .padding(.horizontal, 16)
-            if albums.isEmpty {
-                Text("暂无专辑")
-                    .font(BeansFont.appFont(13))
-                    .foregroundStyle(Color.beansComment)
-                    .padding(.horizontal, 16)
-            } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 10)], spacing: 12) {
-                    ForEach(albums) { album in
-                        Button {
-                            playAlbum(album)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 6) {
-                                CoverImage(url: album.coverURL, size: 88, cornerRadius: 12)
-                                    .frame(maxWidth: .infinity)
-                                Text(album.name)
-                                    .font(BeansFont.appFont(11, .medium))
-                                    .foregroundStyle(Color.beansLabel)
-                                    .lineLimit(1)
-                                if let count = album.trackCount {
-                                    Text(beansSongCountText(count))
-                                        .font(BeansFont.appFont(10))
-                                        .foregroundStyle(Color.beansComment)
-                                }
-                            }
-                            .padding(6)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background { BeansSurface(shape: RoundedRectangle(cornerRadius: 16, style: .continuous)) }
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 10)
-            }
-        }
-    }
-
-    private func playAlbum(_ album: Album) {
-        guard let id = Int(album.id.replacingOccurrences(of: "netease-", with: "")) else { return }
-        BeansHaptics.tap()
-        Task {
-            if let songs = try? await NetEaseAPI.shared.albumSongs(albumID: id), !songs.isEmpty {
-                player.play(songs: songs, startAt: 0)
-                dismiss()
-            } else {
-                ToastCenter.shared.show("专辑歌曲加载失败", duration: 2)
-            }
-        }
-    }
-
     private func load() async {
         loading = true
         errorMessage = nil
         if artistSource == .qq {
             await loadQQArtist()
-        } else if artistSource == .kugou {
-            await loadKugouArtist()
         } else {
-            await loadNetEaseArtist()
+            await loadKugouArtist()
         }
     }
 
-    private func loadNetEaseArtist() async {
-        do {
-            let id: Int
-            if let artistID, let parsed = Int(artistID.replacingOccurrences(of: "netease-", with: "")), parsed > 0 {
-                id = parsed
-            } else {
-                let artists = try await NetEaseAPI.shared.searchArtists(keyword: artistName, limit: 5)
-                guard let first = artists.first else {
-                    errorMessage = "未找到歌手「\(artistName)」"
-                    loading = false
-                    return
-                }
-                artist = first
-                id = Int(first.id.replacingOccurrences(of: "netease-", with: "")) ?? 0
-            }
-            async let songs = (try? NetEaseAPI.shared.artistHotSongs(artistID: id, limit: 300)) ?? []
-            async let albums = (try? NetEaseAPI.shared.artistAlbums(artistID: id)) ?? []
-            let (s, a) = await (songs, albums)
-            hotSongs = s
-            self.albums = a
-            // 接口异常时兜底：分页搜索补全歌手歌曲（避免再次退回 30 首）。
-            if hotSongs.isEmpty {
-                var fallback: [Song] = []
-                for offset in stride(from: 0, to: 300, by: 30) {
-                    let page = (try? await NetEaseAPI.shared.search(keyword: artistName, limit: 30, offset: offset)) ?? []
-                    if page.isEmpty { break }
-                    fallback.append(contentsOf: page)
-                    if page.count < 30 { break }
-                }
-                hotSongs = fallback
-            }
-            loading = false
-        } catch {
-            errorMessage = error.localizedDescription
-            loading = false
-        }
-    }
-
-    /// QQ 歌手：优先用歌手 mid 拉热门歌曲，失败则按歌手名搜索 QQ 歌曲（保证不是网易云数据）
+    /// QQ 歌手：优先用歌手 mid 拉热门歌曲，失败则按歌手名搜索 QQ 歌曲
     private func loadQQArtist() async {
         var mid: String? = nil
         if let artistID, !artistID.hasPrefix("qq-") {

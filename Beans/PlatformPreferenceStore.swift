@@ -31,7 +31,7 @@ final class PlatformPreferenceStore: ObservableObject {
 
     var enabledSearchProviders: [SearchProvider] {
         let list = orderedSearchProviders.filter { selectedRaw.contains($0.rawValue) }
-        return list.isEmpty ? [.netease] : list
+        return list.isEmpty ? [.qq] : list
     }
 
     var enabledLibraryProviders: [LibraryProvider] {
@@ -63,11 +63,11 @@ final class PlatformPreferenceStore: ObservableObject {
     }
 
     func ensureVisible(_ provider: SearchProvider) -> SearchProvider {
-        isEnabled(provider) ? provider : enabledSearchProviders.first ?? .netease
+        isEnabled(provider) ? provider : enabledSearchProviders.first ?? .qq
     }
 
     func ensureVisible(_ provider: LibraryProvider) -> LibraryProvider {
-        isEnabled(provider) ? provider : enabledLibraryProviders.first ?? .netease
+        isEnabled(provider) ? provider : enabledLibraryProviders.first ?? .qq
     }
 
     func resetToDefault() {
@@ -97,7 +97,7 @@ final class PlatformPreferenceStore: ObservableObject {
         let allowed = Set(SearchProvider.allCases.map(\.rawValue))
         selectedRaw = selectedRaw.intersection(allowed)
         if selectedRaw.isEmpty {
-            selectedRaw = [SearchProvider.netease.rawValue]
+            selectedRaw = [SearchProvider.qq.rawValue]
         }
     }
 
@@ -119,14 +119,13 @@ final class PlatformPreferenceStore: ObservableObject {
     }
 
     private static func migrateRawValue(_ raw: String) -> String {
-        raw == "网易云" ? SearchProvider.netease.rawValue : raw
+        raw  // 旧版本里的"网易云"等值不再受支持，normalize 会过滤
     }
 }
 
 extension LibraryProvider {
     var searchProvider: SearchProvider {
         switch self {
-        case .netease: return .netease
         case .qq: return .qq
         case .kugou: return .kugou
         }

@@ -755,7 +755,6 @@ final class LXScriptSourceRunner {
 
     private func providerCode(for source: SongSource) -> String {
         switch source {
-        case .netease: return "wy"
         case .qq: return "tx"
         case .kugou: return "kg"
         }

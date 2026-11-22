@@ -514,7 +514,6 @@ private struct ThirdPartySourceDraft: Identifiable {
 
 private enum ThirdPartySourcePlatform: String, CaseIterable, Identifiable {
     case all
-    case netease
     case qq
     case kugou
 
@@ -523,7 +522,6 @@ private enum ThirdPartySourcePlatform: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .all: return beansLocalized("全部平台", "All Platforms")
-        case .netease: return beansLocalized("网易云音乐", "NetEase Cloud Music")
         case .qq: return beansLocalized("QQ音乐", "QQ Music")
         case .kugou: return beansLocalized("酷狗音乐", "Kugou Music")
         }
@@ -532,7 +530,6 @@ private enum ThirdPartySourcePlatform: String, CaseIterable, Identifiable {
     var code: String? {
         switch self {
         case .all: return nil
-        case .netease: return "wy"
         case .qq: return "tx"
         case .kugou: return "kg"
         }
@@ -540,8 +537,6 @@ private enum ThirdPartySourcePlatform: String, CaseIterable, Identifiable {
 
     init(code: String) {
         switch code.lowercased() {
-        case "wy", "netease", "cloud":
-            self = .netease
         case "tx", "qq", "qqmusic":
             self = .qq
         case "kg", "kugou":

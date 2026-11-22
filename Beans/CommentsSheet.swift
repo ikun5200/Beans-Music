@@ -26,7 +26,6 @@ struct CommentsSheet: View {
     @EnvironmentObject private var theme: ThemeStore
     let song: Song
 
-    @State private var page: NetEaseAPI.SongCommentPage?
     @State private var qqComments: [SongComment] = []
     @State private var qqTotal = 0
     @State private var qqPageNum = 0
@@ -35,7 +34,6 @@ struct CommentsSheet: View {
     @State private var kugouPageNum = 1
     @State private var loading = true
     @State private var errorMessage: String?
-    @State private var offset = 0
 
     private let limit = 30
     /// QQ 音乐每页条数（接口单页上限 25）
@@ -57,12 +55,6 @@ struct CommentsSheet: View {
                         kugouCommentList
                     } else if song.source == .qq {
                         qqCommentList
-                    } else if let page {
-                        if page.hot.isEmpty && page.comments.isEmpty {
-                            EmptyStateView(icon: "bubble.left", text: "暂无评论")
-                        } else {
-                            neteaseCommentList(page)
-                        }
                     }
                 }
                 .navigationTitle("评论")
@@ -72,51 +64,8 @@ struct CommentsSheet: View {
         .task { await load(reset: true) }
     }
 
-    private func neteaseCommentList(_ page: NetEaseAPI.SongCommentPage) -> some View {
-        List {
-            Section {
-                Text(beansCommentCountText(songName: song.name, count: page.total))
-                    .font(BeansFont.appFont(12))
-                    .foregroundStyle(Color.beansComment)
-            }
-            .listRowBackground(Color.clear)
-            if !page.hot.isEmpty {
-                Section("精彩评论") {
-                    ForEach(page.hot) { comment in
-                        CommentRow(comment: comment)
-                            .listRowBackground(Color.clear)
-                    }
-                }
-            }
-            if !page.comments.isEmpty {
-                Section("最新评论") {
-                    ForEach(page.comments) { comment in
-                        CommentRow(comment: comment)
-                            .listRowBackground(Color.clear)
-                    }
-                }
-            }
-            if page.comments.count >= limit {
-                Section {
-                    Button {
-                        Task { await loadMore() }
-                    } label: {
-                        Text("加载更多")
-                            .font(BeansFont.appFont(14, .semibold))
-                            .foregroundStyle(Color.beansAmber)
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-                .listRowBackground(Color.clear)
-            }
-        }
-        .beansScrollContentBackgroundHidden()
-    }
-
     private func load(reset: Bool) async {
         if reset {
-            offset = 0
-            page = nil
             qqComments = []
             qqTotal = 0
             qqPageNum = 0
@@ -151,14 +100,6 @@ struct CommentsSheet: View {
                     qqComments.append(contentsOf: result.comments)
                 }
                 qqTotal = result.total
-            } else {
-                let result = try await NetEaseAPI.shared.songComments(id: song.id, limit: limit, offset: offset)
-                if reset {
-                    page = result
-                } else if var current = page {
-                    current.comments.append(contentsOf: result.comments)
-                    page = current
-                }
             }
             loading = false
         } catch {
@@ -249,10 +190,6 @@ struct CommentsSheet: View {
         }
     }
 
-    private func loadMore() async {
-        offset += limit
-        await load(reset: false)
-    }
 }
 
 // MARK: - 评论行

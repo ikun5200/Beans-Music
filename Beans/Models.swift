@@ -20,7 +20,7 @@ enum BeansAudioQuality: String, CaseIterable, Identifiable {
         }
     }
 
-    /// 网易云 songURL 的 level 参数
+    /// 当前播放音质等级标识
     var level: String { rawValue }
 
     /// 当前官方播放音质（默认 Hi-Res；不可用时由各平台接口自行降级）。
@@ -98,8 +98,6 @@ enum ThirdPartyAudioQuality: String, CaseIterable, Identifiable, Sendable {
             return [.kb128, .kb320, .flac, .flac24bit, .hires, .atmos, .master]
         case "tx":
             return allCases
-        case "wy":
-            return [.kb128, .kb320, .flac, .flac24bit, .hires, .atmos, .master]
         case "git":
             return [.kb128, .kb320, .flac]
         default:
@@ -109,7 +107,6 @@ enum ThirdPartyAudioQuality: String, CaseIterable, Identifiable, Sendable {
 
     static func supported(for source: SongSource) -> [ThirdPartyAudioQuality] {
         switch source {
-        case .netease: return supported(providerCode: "wy")
         case .qq: return supported(providerCode: "tx")
         case .kugou: return supported(providerCode: "kg")
         }
@@ -138,16 +135,15 @@ enum ThirdPartyAudioQuality: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// 歌曲来源（网易云 / QQ音乐 / 酷狗音乐）
+/// 歌曲来源（QQ音乐 / 酷狗音乐）
 enum SongSource: String, Codable, Sendable {
-    case netease
     case qq
     case kugou
 
-    /// 兼容旧版本地收藏：未知或已下线来源统一回退为网易云
+    /// 兼容旧版本地收藏：未知或已下线来源统一回退为 QQ 音乐
     init(from decoder: Decoder) throws {
         let raw = try decoder.singleValueContainer().decode(String.self)
-        self = SongSource(rawValue: raw) ?? .netease
+        self = SongSource(rawValue: raw) ?? .qq
     }
 }
 
@@ -158,7 +154,7 @@ struct Song: Identifiable, Hashable, Codable {
     let album: String
     let coverURL: URL?
     let duration: TimeInterval
-    /// 歌曲来源（网易云 / QQ音乐）
+    /// 歌曲来源（QQ音乐 / 酷狗音乐）
     let source: SongSource
     /// QQ 音乐 songmid（source == .qq 时用于获取播放地址与歌词）
     let qqMid: String?
@@ -169,7 +165,7 @@ struct Song: Identifiable, Hashable, Codable {
     let kugouAlbumAudioId: String?
     let kugouAlbumId: String?
     let kugouQualityHashes: [String: String]?
-    /// 付费/VIP 标记（网易云：0 免费、1 VIP、4 付费单曲；QQ：0 免费、非 0 付费）
+    /// 付费/VIP 标记（QQ：0 免费、非 0 付费）
     let fee: Int
 
     var formattedDuration: String {
@@ -177,22 +173,18 @@ struct Song: Identifiable, Hashable, Codable {
         return String(format: "%d:%02d", total / 60, total % 60)
     }
 
-    /// 跨平台唯一标识（避免网易云与 QQ 音乐歌曲 id 撞车）
+    /// 跨平台唯一标识（避免 QQ 音乐与酷狗歌曲 id 撞车）
     var identityKey: String {
         switch source {
         case .qq: return "qq-\(id)"
         case .kugou: return "kugou-\(id)"
-        case .netease: return "netease-\(id)"
         }
     }
 
     /// 是否为 VIP / 付费歌曲（用于列表与播放器角标）
-    /// 网易云 fee：0 免费、1 VIP、4 付费单曲；8 为翻唱/免费资源，不视为 VIP
     /// QQ payplay：0 免费，非 0 需要会员/付费
     var isVIP: Bool {
         switch source {
-        case .netease:
-            return fee == 1 || fee == 4
         case .qq:
             return fee != 0
         case .kugou:
@@ -200,7 +192,7 @@ struct Song: Identifiable, Hashable, Codable {
         }
     }
 
-    init(id: Int, name: String, artists: String, album: String, coverURL: URL?, duration: TimeInterval, source: SongSource = .netease, qqMid: String? = nil, qqMediaMid: String? = nil, kugouHash: String? = nil, kugouAlbumAudioId: String? = nil, kugouAlbumId: String? = nil, kugouQualityHashes: [String: String]? = nil, fee: Int = 0) {
+    init(id: Int, name: String, artists: String, album: String, coverURL: URL?, duration: TimeInterval, source: SongSource = .qq, qqMid: String? = nil, qqMediaMid: String? = nil, kugouHash: String? = nil, kugouAlbumAudioId: String? = nil, kugouAlbumId: String? = nil, kugouQualityHashes: [String: String]? = nil, fee: Int = 0) {
         self.id = id
         self.name = name
         self.artists = artists
@@ -237,7 +229,7 @@ struct Song: Identifiable, Hashable, Codable {
         }
         let ms = json["duration"] as? Int ?? (json["dt"] as? Int) ?? 0
         duration = Double(ms) / 1000.0
-        source = .netease
+        source = .qq
         qqMid = nil
         qqMediaMid = nil
         kugouHash = nil
@@ -257,7 +249,7 @@ struct Song: Identifiable, Hashable, Codable {
         album = try c.decodeIfPresent(String.self, forKey: .album) ?? ""
         coverURL = try c.decodeIfPresent(URL.self, forKey: .coverURL)
         duration = try c.decodeIfPresent(TimeInterval.self, forKey: .duration) ?? 0
-        source = try c.decodeIfPresent(SongSource.self, forKey: .source) ?? .netease
+        source = try c.decodeIfPresent(SongSource.self, forKey: .source) ?? .qq
         qqMid = try c.decodeIfPresent(String.self, forKey: .qqMid)
         qqMediaMid = try c.decodeIfPresent(String.self, forKey: .qqMediaMid)
         kugouHash = try c.decodeIfPresent(String.self, forKey: .kugouHash)
@@ -286,7 +278,7 @@ struct Song: Identifiable, Hashable, Codable {
     }
 }
 
-/// 歌手搜索结果（网易云 / QQ音乐通用）
+/// 歌手搜索结果（QQ音乐 / 酷狗音乐通用）
 struct Artist: Identifiable, Hashable {
     let id: String
     let name: String
@@ -294,7 +286,7 @@ struct Artist: Identifiable, Hashable {
     let source: SongSource
 }
 
-/// 专辑搜索结果（网易云 / QQ音乐通用）
+/// 专辑搜索结果（QQ音乐 / 酷狗音乐通用）
 struct Album: Identifiable, Hashable {
     let id: String
     let name: String
@@ -311,10 +303,10 @@ struct Playlist: Identifiable, Hashable, Codable {
     let trackCount: Int
     let creatorName: String
     let specialType: Int
-    /// 歌单来源（网易云 / QQ音乐），非网易云歌单用对应接口加载
+    /// 歌单来源（QQ音乐 / 酷狗音乐），非 QQ 歌单用对应接口加载
     let source: SongSource
 
-    init(id: Int, name: String, coverURL: URL?, trackCount: Int = 0, source: SongSource = .netease) {
+    init(id: Int, name: String, coverURL: URL?, trackCount: Int = 0, source: SongSource = .qq) {
         self.id = id
         self.name = name
         self.coverURL = coverURL
@@ -333,7 +325,7 @@ struct Playlist: Identifiable, Hashable, Codable {
         coverURL = pic.isEmpty ? nil : URL(string: pic)
         creatorName = (json["creator"] as? [String: Any])?["nickname"] as? String ?? ""
         specialType = json["specialType"] as? Int ?? 0
-        source = .netease
+        source = .qq
     }
 
     init?(personalizedJSON json: [String: Any]) {
@@ -345,27 +337,7 @@ struct Playlist: Identifiable, Hashable, Codable {
         coverURL = pic.isEmpty ? nil : URL(string: pic)
         creatorName = ""
         specialType = json["specialType"] as? Int ?? 0
-        source = .netease
-    }
-
-    var isNetEaseLikedPlaylist: Bool {
-        source == .netease && (specialType == 5 || name == "我喜欢的音乐" || name.localizedCaseInsensitiveContains("liked songs"))
-    }
-}
-
-struct TopList: Identifiable, Hashable {
-    let id: Int
-    let name: String
-    let coverURL: URL?
-    let updateFrequency: String
-
-    init?(json: [String: Any]) {
-        guard let id = json["id"] as? Int else { return nil }
-        self.id = id
-        name = json["name"] as? String ?? ""
-        let pic = json["coverImgUrl"] as? String ?? ""
-        coverURL = pic.isEmpty ? nil : URL(string: pic)
-        updateFrequency = json["updateFrequency"] as? String ?? ""
+        source = .qq
     }
 }
 
@@ -390,7 +362,7 @@ struct LyricLine: Identifiable, Hashable {
     let id: UUID
     let time: Double
     let text: String
-    /// 歌词翻译（网易云 tlyric，可空）
+    /// 歌词翻译（可空）
     var translation: String?
 
     init(time: Double, text: String, translation: String? = nil) {
@@ -402,7 +374,7 @@ struct LyricLine: Identifiable, Hashable {
 }
 
 enum LyricParser {
-    /// 解析歌词；可选传入翻译歌词（网易云 tlyric），按时间戳合并到对应行
+    /// 解析歌词；可选传入翻译歌词，按时间戳合并到对应行
     static func parse(_ raw: String, translationRaw: String? = nil) -> [LyricLine] {
         var lines = parseCore(raw, offset: declaredOffsetSeconds(in: raw))
         if let translationRaw, !translationRaw.isEmpty {
@@ -477,62 +449,6 @@ enum LyricTiming {
         let offset = userOffset ?? UserDefaults.standard.double(forKey: userOffsetKey)
         return max(0, line.time - offset)
     }
-}
-
-struct NetEaseUser: Identifiable, Hashable, Codable {
-    let uid: Int
-    let nickname: String
-    let avatarURL: URL?
-    /// 网易云会员类型：0 无会员；非 0 有 VIP；>= 11 为黑胶 SVIP（接口字段 profile.vipType）
-    let vipType: Int
-
-    var id: Int { uid }
-
-    /// VIP 标识：nil 表示无会员
-    var vipBadge: String? {
-        if vipType >= 11 { return "SVIP" }
-        if vipType > 0 { return "VIP" }
-        return nil
-    }
-
-    init?(json: [String: Any]) {
-        guard let id = json["userId"] as? Int ?? (json["id"] as? Int) else { return nil }
-        uid = id
-        nickname = json["nickname"] as? String ?? ""
-        let pic = json["avatarUrl"] as? String ?? ""
-        avatarURL = pic.isEmpty ? nil : URL(string: pic)
-        vipType = json["vipType"] as? Int ?? 0
-    }
-
-    enum CodingKeys: String, CodingKey { case uid, nickname, avatarURL, vipType }
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        uid = try c.decode(Int.self, forKey: .uid)
-        nickname = try c.decode(String.self, forKey: .nickname)
-        avatarURL = try c.decodeIfPresent(URL.self, forKey: .avatarURL)
-        vipType = try c.decodeIfPresent(Int.self, forKey: .vipType) ?? 0
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(uid, forKey: .uid)
-        try c.encode(nickname, forKey: .nickname)
-        try c.encodeIfPresent(avatarURL, forKey: .avatarURL)
-        try c.encode(vipType, forKey: .vipType)
-    }
-}
-/// 听歌排行条目（网易云听歌记录）
-struct PlayRecordItem: Identifiable, Hashable {
-    let song: Song
-    let playCount: Int
-    var id: Int { song.id }
-}
-
-/// 听歌排行结果（列表 + 真实总数，避免被接口单次上限截断）
-struct PlayRecordResult {
-    let items: [PlayRecordItem]
-    let totalCount: Int
 }
 
 // MARK: - 歌曲评论

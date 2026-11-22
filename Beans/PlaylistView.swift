@@ -10,7 +10,6 @@ enum PlaylistSortMode: String, CaseIterable, Identifiable {
 
 struct PlaylistView: View {
     @EnvironmentObject private var player: PlayerManager
-    @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var theme: ThemeStore
     @ObservedObject private var favorites = FavoritesStore.shared
 
@@ -29,8 +28,6 @@ struct PlaylistView: View {
 
     private var cacheAccountID: String {
         switch playlist.source {
-        case .netease:
-            return "\(auth.user?.uid ?? 0)"
         case .qq:
             let qqAuth = QQMusicAuth.shared
             return qqAuth.rawUin.isEmpty ? qqAuth.playlistUin : qqAuth.rawUin
@@ -187,7 +184,7 @@ struct PlaylistView: View {
         do {
             if playlist.source == .kugou {
                 tracks = try await KugouMusicAPI.shared.playlistSongs(listID: playlist.id)
-            } else if playlist.source == .qq {
+            } else {
                 tracks = try await QQMusicAPI.shared.playlistSongs(listID: playlist.id)
                 // 云端收藏接口临时被风控或返回空时，至少展示已同步到本机的 QQ 收藏，
                 // 避免“我的喜欢”进入后变成空白页面。
@@ -195,8 +192,6 @@ struct PlaylistView: View {
                     tracks = favorites.qqFavoriteSongs
                     BeansLogger.shared.log("QQ 我的喜欢页面网络结果为空，使用本地收藏回退 count=\(tracks.count)", level: tracks.isEmpty ? .warn : .info)
                 }
-            } else {
-                tracks = try await NetEaseAPI.shared.playlistTracks(id: playlist.id)
             }
             if !tracks.isEmpty {
                 cache.saveSongs(tracks, playlist: playlist, accountID: cacheAccountID)

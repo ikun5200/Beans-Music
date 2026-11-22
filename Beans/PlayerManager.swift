@@ -527,14 +527,6 @@ final class PlayerManager: NSObject, ObservableObject {
                         strict: strictUnlock
                     )
                 }
-            } else {
-                (urlString, resolvedThirdParty) = await neteaseResolve(
-                    song: song,
-                    quality: quality,
-                    thirdPartyQuality: thirdPartyQuality,
-                    enableUnblock: enableUnblock,
-                    strict: strictUnlock
-                )
             }
             if let resolved = resolvedThirdParty {
                 let notice = self.thirdPartyVIPNotice(for: song, sourceTitle: resolved.sourceTitle)
@@ -580,42 +572,6 @@ final class PlayerManager: NSObject, ObservableObject {
         }
     }
 
-    /// 网易云播放地址解析：按设置音质取 URL，VIP/灰色歌曲交给第三方解锁。
-    private func neteaseResolve(
-        song: Song,
-        quality: BeansAudioQuality,
-        thirdPartyQuality: ThirdPartyAudioQuality = .current,
-        enableUnblock: Bool,
-        strict: Bool = false
-    ) async -> (String?, UnblockService.Resolved?) {
-        var urlString: String?
-        var resolved: UnblockService.Resolved?
-        let infos = try? await NetEaseAPI.shared.songURLInfo(ids: [song.id], level: quality.level)
-        var info = infos?[song.id]
-        if (info?.url == nil || info?.freeTrial == true), quality != .standard {
-            // 高音质拿不到时自动回落到标准音质
-            let fallback = try? await NetEaseAPI.shared.songURLInfo(ids: [song.id], level: "standard")
-            info = fallback?[song.id]
-        }
-        BeansLogger.shared.log("网易云解析：\(song.name) 音质=\(quality.level) 官方URL=\(info?.url == nil ? "无" : "有") 试听=\(info?.freeTrial == true ? "是" : "否")", level: .debug)
-        // 试听片段 / 无 URL 一律不直接播放，交给第三方解锁，避免"只能试听"
-        if let u = info?.url, info?.freeTrial != true {
-            urlString = u
-        }
-        if urlString == nil, enableUnblock {
-            resolved = await UnblockService.resolve(
-                name: song.name,
-                artists: song.artists,
-                neteaseID: song.id,
-                songSource: .netease,
-                quality: thirdPartyQuality,
-                strict: strict
-            )
-        }
-        BeansLogger.shared.log("网易云结果：\(song.name) 官方=\(urlString != nil ? "是" : "否") 第三方=\(resolved != nil ? "命中" : "未用/未命中")", level: .debug)
-        return (urlString, resolved)
-    }
-
     /// QQ 歌曲兜底：官方失败后只走 QQ 第三方接口，不跨平台匹配同名歌曲。
     private func qqFallback(
         song: Song,
@@ -633,7 +589,7 @@ final class PlayerManager: NSObject, ObservableObject {
             name: song.name,
             artists: song.artists,
             // QQ 专属音源要求传数字 songId；mid 仅作为兼容接口的后备参数。
-            neteaseID: song.id,
+            songID: song.id,
             songSource: .qq,
             qqMid: song.qqMid,
             qqMediaMid: song.qqMediaMid,
@@ -659,7 +615,7 @@ final class PlayerManager: NSObject, ObservableObject {
             let resolved = await UnblockService.resolve(
                 name: song.name,
                 artists: song.artists,
-                neteaseID: 0,
+                songID: 0,
                 songSource: .kugou,
                 kugouID: kugouID,
                 quality: thirdPartyQuality
@@ -670,58 +626,7 @@ final class PlayerManager: NSObject, ObservableObject {
             }
         }
 
-        let strict = shouldLockOfficialOnly(song)
-        if let matched = await matchNetEaseSong(
-            name: song.name,
-            artists: song.artists,
-            durationMS: Int(song.duration * 1000),
-            strict: strict
-        ) {
-            let resolved = await UnblockService.resolve(
-                name: matched.name,
-                artists: matched.artists,
-                neteaseID: matched.id,
-                songSource: .netease,
-                quality: thirdPartyQuality,
-                strict: strict
-            )
-            BeansLogger.shared.log("酷狗兜底转网易云音源：\(song.name) -> \(matched.name) 第三方=\(resolved != nil ? "命中" : "未命中")", level: .debug)
-            return resolved
-        }
-
         BeansLogger.shared.log("酷狗兜底：\(song.name) 第三方=未命中", level: .debug)
-        return nil
-    }
-
-    /// 不再按歌手硬拦截跨平台兜底，避免 QQ 官方失败后把可播的网易云链路一并阻断。
-    private func shouldLockOfficialOnly(_ song: Song) -> Bool {
-        false
-    }
-
-    /// 在网易云按 歌名+歌手 匹配同名歌曲（QQ vkey 失败时的免费播放兜底）
-    private func matchNetEaseSong(name: String, artists: String, durationMS: Int, strict: Bool = false) async -> Song? {
-        let keyword = ([name, artists].filter { !$0.isEmpty }).joined(separator: " ")
-        guard !keyword.isEmpty,
-              let results = try? await NetEaseAPI.shared.search(keyword: keyword, limit: 8),
-              !results.isEmpty else { return nil }
-        let target = Double(durationMS) / 1000.0
-        let artistTokens = artists.lowercased().split(whereSeparator: { $0 == " " || $0 == "/" || $0 == "&" }).map(String.init)
-        // 优先：歌手匹配 + 时长接近（兼容 Jay Chou 别名）
-        if let hit = results.first(where: { song in
-            let durOK = abs(song.duration - target) < 12
-            let songArtists = song.artists.lowercased()
-            let artistOK = artistTokens.contains { !$0.isEmpty && songArtists.contains($0) }
-                || (songArtists.contains("周杰伦") && artists.lowercased().contains("jay chou"))
-            return durOK && artistOK
-        }) { return hit }
-        // 严格模式（周杰伦等版权歌手）：找不到原唱直接放弃，绝不返回翻唱
-        if strict { return nil }
-        // 其次：仅时长接近（必须足够接近才用，避免张冠李戴）
-        if let hit = results.min(by: { abs($0.duration - target) < abs($1.duration - target) }),
-           abs(hit.duration - target) < 20 {
-            return hit
-        }
-        // 找不到可靠匹配：宁可播放失败，也不播放错误歌曲
         return nil
     }
 
@@ -1231,16 +1136,6 @@ final class PlayerManager: NSObject, ObservableObject {
         excludedHosts: Set<String> = []
     ) async -> UnblockService.Resolved? {
         switch song.source {
-        case .netease:
-            return await UnblockService.resolve(
-                name: song.name,
-                artists: song.artists,
-                neteaseID: song.id,
-                songSource: .netease,
-                quality: quality,
-                strict: strict,
-                excludedHosts: excludedHosts
-            )
         case .qq:
             return await qqFallback(
                 song: song,
@@ -1256,7 +1151,7 @@ final class PlayerManager: NSObject, ObservableObject {
             return await UnblockService.resolve(
                 name: song.name,
                 artists: song.artists,
-                neteaseID: 0,
+                songID: 0,
                 songSource: .kugou,
                 kugouID: kugouID,
                 quality: quality,
@@ -1430,12 +1325,6 @@ final class PlayerManager: NSObject, ObservableObject {
             return QQMusicAuth.shared.vipBadge != nil
         case .kugou:
             return KugouMusicAuth.shared.vipBadge != nil
-        case .netease:
-            guard let data = defaults.data(forKey: "beans.user"),
-                  let user = try? JSONDecoder().decode(NetEaseUser.self, from: data) else {
-                return false
-            }
-            return user.vipBadge != nil
         }
     }
 

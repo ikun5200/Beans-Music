@@ -27,8 +27,8 @@ enum UnblockService {
     static func resolve(
         name: String,
         artists: String,
-        neteaseID: Int,
-        songSource: SongSource = .netease,
+        songID: Int,
+        songSource: SongSource = .qq,
         qqMid: String? = nil,
         qqMediaMid: String? = nil,
         kugouID: String? = nil,
@@ -43,7 +43,7 @@ enum UnblockService {
             .filter { source in
                 guard source.enabled else { return false }
                 return isScriptSource(source)
-                    || canUse(source: source, songSource: songSource, neteaseID: neteaseID, qqMid: qqMid, kugouID: kugouID)
+                    || canUse(source: source, songSource: songSource, songID: songID, qqMid: qqMid, kugouID: kugouID)
             }
         guard !sources.isEmpty else {
             BeansLogger.shared.log(
@@ -57,7 +57,7 @@ enum UnblockService {
             sources,
             name: name,
             artists: artists,
-            neteaseID: neteaseID,
+            songID: songID,
             songSource: songSource,
             qqMid: qqMid,
             qqMediaMid: qqMediaMid,
@@ -71,7 +71,7 @@ enum UnblockService {
         _ sources: [ThirdPartySource],
         name: String,
         artists: String,
-        neteaseID: Int,
+        songID: Int,
         songSource: SongSource,
         qqMid: String?,
         qqMediaMid: String?,
@@ -94,7 +94,7 @@ enum UnblockService {
                             source: source,
                             name: name,
                             artists: artists,
-                            neteaseID: neteaseID,
+                            songID: songID,
                             songSource: songSource,
                             qqMid: qqMid,
                             qqMediaMid: qqMediaMid,
@@ -107,7 +107,7 @@ enum UnblockService {
                         source: source,
                         name: name,
                         artists: artists,
-                        neteaseID: neteaseID,
+                        songID: songID,
                         songSource: songSource,
                         qqMid: qqMid,
                         qqMediaMid: qqMediaMid,
@@ -127,7 +127,7 @@ enum UnblockService {
         }
     }
 
-    private static func canUse(source: ThirdPartySource, songSource: SongSource, neteaseID: Int, qqMid: String?, kugouID: String?) -> Bool {
+    private static func canUse(source: ThirdPartySource, songSource: SongSource, songID: Int, qqMid: String?, kugouID: String?) -> Bool {
         let expectedProvider = providerCode(for: songSource)
         if let provider = source.headers["source"], !provider.isEmpty, provider != expectedProvider {
             return false
@@ -138,7 +138,7 @@ enum UnblockService {
         if songSource == .kugou {
             return kugouID?.isEmpty == false
         }
-        return neteaseID > 0
+        return songID > 0
     }
 
     private static func isScriptSource(_ source: ThirdPartySource) -> Bool {
@@ -150,7 +150,7 @@ enum UnblockService {
         source: ThirdPartySource,
         name: String,
         artists: String,
-        neteaseID: Int,
+        songID: Int,
         songSource: SongSource,
         qqMid: String?,
         qqMediaMid: String?,
@@ -165,16 +165,12 @@ enum UnblockService {
         }
         let songIDs: [String]
         switch songSource {
-        case .netease where neteaseID > 0:
-            songIDs = [String(neteaseID)]
         case .qq:
             guard let qqMid, !qqMid.isEmpty else { return nil }
-            songIDs = qqIDCandidates(songID: neteaseID, songMid: qqMid, mediaMid: qqMediaMid)
+            songIDs = qqIDCandidates(songID: songID, songMid: qqMid, mediaMid: qqMediaMid)
         case .kugou:
             guard let kugouID, !kugouID.isEmpty else { return nil }
             songIDs = [kugouID]
-        default:
-            return nil
         }
         let apiKeys = orderedAPIKeys(for: source)
         let apiKeyPlaceholders = ["{apiKey}", "{apikey}", "{key}"]
@@ -259,7 +255,7 @@ enum UnblockService {
         source: ThirdPartySource,
         name: String,
         artists: String,
-        neteaseID: Int,
+        songID: Int,
         songSource: SongSource,
         qqMid: String?,
         qqMediaMid: String?,
@@ -270,24 +266,20 @@ enum UnblockService {
         guard let script = source.script?.trimmingCharacters(in: .whitespacesAndNewlines), !script.isEmpty else { return nil }
         let songIDs: [String]
         switch songSource {
-        case .netease where neteaseID > 0:
-            songIDs = [String(neteaseID)]
         case .qq:
             guard let qqMid, !qqMid.isEmpty else { return nil }
             var candidates: [String] = [qqMid]
             if let qqMediaMid, !qqMediaMid.isEmpty {
                 candidates.append(qqMediaMid)
             }
-            if neteaseID > 0 {
-                candidates.append(String(neteaseID))
+            if songID > 0 {
+                candidates.append(String(songID))
             }
             var seen = Set<String>()
             songIDs = candidates.filter { seen.insert($0).inserted }
         case .kugou:
             guard let kugouID, !kugouID.isEmpty else { return nil }
             songIDs = [kugouID]
-        default:
-            return nil
         }
 
         let qualities = qualityCandidates(for: source, songSource: songSource, preferredQuality: preferredQuality)
@@ -464,7 +456,7 @@ enum UnblockService {
         let sourceDefault = ThirdPartyAudioQuality(sourceValue: source.quality)
         let platformDefault: ThirdPartyAudioQuality = {
             switch songSource {
-            case .netease, .qq, .kugou:
+            case .qq, .kugou:
                 return .kb320
             }
         }()
@@ -584,7 +576,6 @@ enum UnblockService {
 
     private static func providerCode(for source: SongSource) -> String {
         switch source {
-        case .netease: return "wy"
         case .qq: return "tx"
         case .kugou: return "kg"
         }

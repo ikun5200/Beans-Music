@@ -4,7 +4,6 @@ import SwiftUI
 
 struct LocalMusicSection: View {
     fileprivate enum SyncTarget: String, CaseIterable, Identifiable {
-        case netease = "网易云音乐"
         case qq = "QQ音乐"
         case kugou = "酷狗音乐"
 
@@ -13,7 +12,6 @@ struct LocalMusicSection: View {
 
     @ObservedObject private var store = LocalLibraryStore.shared
     @EnvironmentObject private var player: PlayerManager
-    @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var favorites: FavoritesStore
     @EnvironmentObject private var theme: ThemeStore
     @AppStorage("beans.language") private var languageRaw = AppLanguage.chinese.rawValue
@@ -195,33 +193,6 @@ struct LocalMusicSection: View {
         syncMessage = ""
         var songs: [Song] = []
         var details: [String] = []
-        if targets.contains(.netease), let user = auth.user, auth.isLoggedIn {
-            do {
-                let lists = try await NetEaseAPI.shared.userPlaylists(uid: user.uid)
-                let liked = lists.first { list in
-                    let name = list.name.replacingOccurrences(of: " ", with: "")
-                    return name.contains("喜欢") || name.contains("我喜欢")
-                }
-                if let liked {
-                    let neteaseSongs = try await NetEaseAPI.shared.playlistTracks(id: liked.id)
-                    songs.append(contentsOf: neteaseSongs)
-                    details.append(platformSongCount("网易云", neteaseSongs.count))
-                } else {
-                    details.append(NSLocalizedString("网易云未找到喜欢歌单", comment: ""))
-                }
-            } catch {
-                BeansLogger.shared.log("三平台同步：网易云失败 \(error.localizedDescription)", level: .error)
-                details.append(NSLocalizedString("网易云请求失败", comment: ""))
-            }
-        } else if targets.contains(.netease) {
-            details.append(NSLocalizedString("网易云未登录", comment: ""))
-        }
-        if targets.contains(.netease), !favorites.neteaseFavoriteSongs.isEmpty {
-            let cachedIDs = Set(songs.filter { $0.source == .netease }.map(\.id))
-            let cached = favorites.neteaseFavoriteSongs.filter { !cachedIDs.contains($0.id) }
-            songs.append(contentsOf: cached)
-            if !cached.isEmpty { details.append(String(format: NSLocalizedString("网易云缓存补充 %d 首", comment: ""), cached.count)) }
-        }
         if targets.contains(.qq), QQMusicAuth.shared.isLoggedIn {
             do {
                 let qqSongs = try await QQMusicAPI.shared.favoriteSongs(limit: 0)
@@ -365,7 +336,6 @@ fileprivate struct SyncPlatformPicker: View {
 
     private func icon(for target: LocalMusicSection.SyncTarget) -> String {
         switch target {
-        case .netease: return "music.note"
         case .qq: return "q.circle"
         case .kugou: return "dog"
         }
@@ -377,7 +347,6 @@ fileprivate struct SyncPlatformPicker: View {
 struct LocalPlaylistDetailSheet: View {
     @ObservedObject private var store = LocalLibraryStore.shared
     @EnvironmentObject private var player: PlayerManager
-    @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var theme: ThemeStore
     @Environment(\.dismiss) private var dismiss
 
@@ -607,20 +576,19 @@ struct LocalPlaylistDetailSheet: View {
     }
 }
 
-// MARK: - 本地歌单搜索添加（网易云 / QQ 音乐）
+// MARK: - 本地歌单搜索添加（QQ音乐 / 酷狗音乐）
 
 struct LocalSearchAddSheet: View {
     @ObservedObject private var store = LocalLibraryStore.shared
     @ObservedObject private var platformPrefs = PlatformPreferenceStore.shared
     @EnvironmentObject private var player: PlayerManager
-    @EnvironmentObject private var auth: AuthStore
     @Environment(\.dismiss) private var dismiss
 
     let playlistID: UUID
     @State private var keyword = ""
     @State private var results: [Song] = []
     @State private var searching = false
-    @State private var provider: SearchProvider = .netease
+    @State private var provider: SearchProvider = .qq
     private var searchProviders: [SearchProvider] { platformPrefs.enabledSearchProviders }
     @State private var task: Task<Void, Never>?
 
@@ -706,8 +674,6 @@ struct LocalSearchAddSheet: View {
             do {
                 let songs: [Song]
                 switch provider {
-                case .netease:
-                    songs = try await NetEaseAPI.shared.search(keyword: trimmed, limit: 30)
                 case .qq:
                     songs = try await QQMusicAPI.shared.searchSongs(keyword: trimmed)
                 case .kugou:

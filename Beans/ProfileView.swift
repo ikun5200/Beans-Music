@@ -11,7 +11,6 @@ enum DownloadOutcome {
 
 struct ProfileView: View {
     @EnvironmentObject private var theme: ThemeStore
-    @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var player: PlayerManager
     @AppStorage("beans.themeMode") private var themeModeRaw = BeansThemeMode.system.rawValue
     @AppStorage("beans.uiStyle") private var uiStyleRaw = BeansUIStyle.liquid.rawValue
@@ -20,7 +19,7 @@ struct ProfileView: View {
 
     @State private var showHistory = false
 
-    /// 统一账号登录面板（网易云 + QQ 音乐整合）
+    /// 统一账号登录面板（QQ 音乐 + 酷狗音乐整合）
     @State private var showAccountHub = false
     /// 设置页（外观 + 歌词翻译等）
     @State private var showSettings = false
@@ -61,7 +60,6 @@ struct ProfileView: View {
         if !isEnglish { return platformPrefs.summaryText }
         return platformPrefs.enabledSearchProviders.map { provider in
             switch provider {
-            case .netease: return "NetEase Cloud Music"
             case .qq: return "QQ Music"
             case .kugou: return "Kugou Music"
             }
@@ -76,13 +74,6 @@ struct ProfileView: View {
     /// 登录状态的合并提示（展示各平台真实昵称）
     private var accountStatusLine: String {
         var parts: [String] = []
-        if platformPrefs.isEnabled(SearchProvider.netease), auth.isLoggedIn {
-            if let nick = auth.user?.nickname, !nick.isEmpty {
-                parts.append("网易云音乐 \(nick)")
-            } else {
-                parts.append("网易云音乐 UID \(auth.user?.uid ?? 0)")
-            }
-        }
         if platformPrefs.isEnabled(SearchProvider.qq), qqAuth.isLoggedIn {
                 parts.append(qqAuth.nickname.isEmpty ? (isEnglish ? "QQ Music Logged In" : "QQ 已登录") : qqAuth.nickname)
         }
@@ -96,8 +87,7 @@ struct ProfileView: View {
     }
 
     private var hasVisibleAccountLogin: Bool {
-        (platformPrefs.isEnabled(SearchProvider.netease) && auth.isLoggedIn)
-            || (platformPrefs.isEnabled(SearchProvider.qq) && qqAuth.isLoggedIn)
+        (platformPrefs.isEnabled(SearchProvider.qq) && qqAuth.isLoggedIn)
             || (platformPrefs.isEnabled(SearchProvider.kugou) && kugouAuth.isLoggedIn)
     }
 
@@ -204,7 +194,6 @@ struct ProfileView: View {
         .task {
             guard !didRefreshProfileAccount else { return }
             didRefreshProfileAccount = true
-            await auth.refreshAccount()
             if qqAuth.isLoggedIn {
                 await qqAuth.fetchVIPStatus()
             }
@@ -340,33 +329,23 @@ struct ProfileView: View {
         VStack(spacing: 16) {
             Button {
                 BeansHaptics.tap()
-                // 统一账号面板：网易云 + QQ 音乐登录整合在一起
+                // 统一账号面板：QQ 音乐 + 酷狗音乐登录整合在一起
                 showAccountHub = true
             } label: {
                 HStack(spacing: 14) {
                     // 头像：主题渐变描边环
-                    AsyncImage(url: auth.user?.avatarURL) { phase in
-                        if case .success(let image) = phase {
-                            image.resizable().scaledToFill()
-                        } else {
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 26))
-                                .foregroundStyle(Color.beansComment)
-                        }
-                    }
-                    .frame(width: 64, height: 64)
-                    .clipShape(Circle())
-                    .background(Color.beansGlassFill, in: Circle())
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 26))
+                        .foregroundStyle(Color.beansComment)
+                        .frame(width: 64, height: 64)
+                        .background(Color.beansGlassFill, in: Circle())
 
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 6) {
-                            Text(auth.user?.nickname ?? (auth.isLoggedIn ? (isEnglish ? "NetEase Cloud Music Logged In" : "网易云音乐已登录") : (isEnglish ? "Guest · Tap to Sign In" : "免登录 · 点击登录")))
+                            Text(isEnglish ? "Account · Tap to Sign In" : "账号 · 点击登录")
                                 .font(BeansFont.appFont(20, .bold))
                                 .foregroundStyle(Color.beansLabel)
                                 .lineLimit(1)
-                            if auth.isLoggedIn, let badge = auth.user?.vipBadge {
-                                VIPBadgeView(text: badge)
-                            }
                         }
                         Text(accountStatusLine)
                             .font(BeansFont.appFont(12, .regular, .monospaced))
@@ -382,8 +361,7 @@ struct ProfileView: View {
             }
             .buttonStyle(.plain)
 
-            if (platformPrefs.isEnabled(SearchProvider.netease) && auth.isLoggedIn)
-                || (platformPrefs.isEnabled(SearchProvider.qq) && qqAuth.isLoggedIn)
+            if (platformPrefs.isEnabled(SearchProvider.qq) && qqAuth.isLoggedIn)
                 || (platformPrefs.isEnabled(SearchProvider.kugou) && kugouAuth.isLoggedIn) {
                 platformStatusRow
             }
@@ -395,12 +373,9 @@ struct ProfileView: View {
         .beansCardShadow(radius: 10, y: 4)
     }
 
-    /// 每个登录平台单独展示登录成功状态（网易云 / QQ 音乐）
+    /// 每个登录平台单独展示登录成功状态（QQ 音乐 / 酷狗音乐）
     private var platformStatusRow: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if platformPrefs.isEnabled(SearchProvider.netease), auth.isLoggedIn {
-                platformChip(imageName: "BrandNetease", name: "网易云音乐", status: auth.user?.nickname ?? "已登录", badge: auth.user?.vipBadge)
-            }
             if platformPrefs.isEnabled(SearchProvider.qq), qqAuth.isLoggedIn {
                 platformChip(imageName: "BrandQQ", name: "QQ 音乐", status: qqAuth.nickname.isEmpty ? "已登录" : qqAuth.nickname, badge: qqAuth.vipBadge)
             }
@@ -866,21 +841,18 @@ struct CommunityQRSheet: View {
     }
 }
 
-// MARK: - 统一账号登录面板（网易云 + QQ 音乐整合）
+// MARK: - 统一账号登录面板（QQ 音乐 + 酷狗音乐整合）
 
 struct AccountHubSheet: View {
     @EnvironmentObject private var theme: ThemeStore
-    @EnvironmentObject private var auth: AuthStore
     @ObservedObject private var qqAuth = QQMusicAuth.shared
     @ObservedObject private var kugouAuth = KugouMusicAuth.shared
     @ObservedObject private var platformPrefs = PlatformPreferenceStore.shared
     @AppStorage("beans.language") private var languageRaw = AppLanguage.chinese.rawValue
     @Environment(\.dismiss) private var dismiss
 
-    @State private var showNeteaseLogin = false
     @State private var showQQLogin = false
     @State private var showKugouLogin = false
-    @State private var confirmNeteaseLogout = false
     @State private var confirmQQLogout = false
     @State private var confirmKugouLogout = false
 
@@ -889,7 +861,6 @@ struct AccountHubSheet: View {
         if !isEnglish { return platformPrefs.summaryText }
         return platformPrefs.enabledSearchProviders.map { provider in
             switch provider {
-            case .netease: return "NetEase Cloud Music"
             case .qq: return "QQ Music"
             case .kugou: return "Kugou Music"
             }
@@ -903,7 +874,6 @@ struct AccountHubSheet: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         SectionHeader(title: "账号")
-                        if platformPrefs.isEnabled(SearchProvider.netease) { neteaseCard }
                         if platformPrefs.isEnabled(SearchProvider.qq) { qqCard }
                         if platformPrefs.isEnabled(SearchProvider.kugou) { kugouCard }
                         Text(isEnglish ? "Sign in to \(displayPlatformSummary) to sync playlists and improve playback availability" : "\(platformPrefs.summaryText) 登录后可同步歌单并提升可播成功率")
@@ -923,11 +893,6 @@ struct AccountHubSheet: View {
                 }
             }
         }
-        .sheet(isPresented: $showNeteaseLogin) {
-            LoginView()
-                .environmentObject(auth)
-                .environmentObject(theme)
-        }
         .sheet(isPresented: $showQQLogin) {
             QQLoginSheet()
                 .environmentObject(theme)
@@ -935,14 +900,6 @@ struct AccountHubSheet: View {
         .sheet(isPresented: $showKugouLogin) {
             KugouLoginSheet()
                 .environmentObject(theme)
-        }
-        .confirmationDialog("退出网易云登录？", isPresented: $confirmNeteaseLogout, titleVisibility: .visible) {
-            Button("退出登录", role: .destructive) {
-                auth.logout()
-                WebLoginDataCleaner.clearNetEase()
-                ToastCenter.shared.show("已退出网易云账号")
-            }
-            Button("取消", role: .cancel) {}
         }
         .confirmationDialog("退出 QQ 音乐？", isPresented: $confirmQQLogout, titleVisibility: .visible) {
             Button("退出登录", role: .destructive) {
@@ -960,61 +917,6 @@ struct AccountHubSheet: View {
             }
             Button("取消", role: .cancel) {}
         }
-    }
-
-    /// 网易云账号卡片
-    private var neteaseCard: some View {
-        Button {
-            BeansHaptics.tap()
-            if auth.isLoggedIn { confirmNeteaseLogout = true } else { showNeteaseLogin = true }
-        } label: {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(.white.opacity(0.06))
-                        .frame(width: 48, height: 48)
-                    Image("BrandNetease")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 48, height: 48)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("网易云音乐")
-                        .font(BeansFont.appFont(15, .semibold))
-                        .foregroundStyle(Color.beansLabel)
-                    HStack(spacing: 6) {
-                        Group {
-                            if auth.isLoggedIn {
-                                Text(auth.user?.nickname ?? NSLocalizedString("已登录", comment: ""))
-                            } else {
-                                Text(LocalizedStringKey("未登录 · 扫码登录同步歌单"))
-                            }
-                        }
-                        .font(BeansFont.appFont(12))
-                        .foregroundStyle(Color.beansComment)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
-                        if auth.isLoggedIn, let badge = auth.user?.vipBadge {
-                            VIPBadgeView(text: badge)
-                        }
-                    }
-                }
-                Spacer()
-                Text(auth.isLoggedIn ? "退出" : "登录")
-                    .font(BeansFont.appFont(13, .medium))
-                    .foregroundStyle(auth.isLoggedIn ? Color.red : Color.beansAmber)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .background { BeansSurface(shape: Capsule()) }
-            }
-            .padding(14)
-            .background {
-                                BeansGlass(shape: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(GlassPressButtonStyle(scale: 0.97))
     }
 
     /// QQ 音乐账号卡片
@@ -2634,7 +2536,6 @@ struct SettingsView: View {
 
     private static func isAccountBackupKey(_ key: String) -> Bool {
         key == "beans.user"
-            || key.hasPrefix("beans.netease.")
             || key.hasPrefix("beans.qqmusic.")
             || key.hasPrefix("beans.kugou.")
     }
@@ -2953,7 +2854,7 @@ struct SettingsView: View {
             Text("Beans Music · 仅供学习交流，纯 AI 实现此应用")
                 .font(BeansFont.appFont(11))
                 .foregroundStyle(Color.beansComment.opacity(0.7))
-            Text("接入网易云音乐、QQ 音乐等公开接口")
+            Text("接入 QQ 音乐、酷狗音乐等公开接口")
                 .font(BeansFont.appFont(11))
                 .foregroundStyle(Color.beansComment.opacity(0.7))
         }

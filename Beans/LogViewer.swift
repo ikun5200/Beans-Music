@@ -156,7 +156,6 @@ private enum BeansLogLocalizer {
         ("音质", "quality"),
         ("免费听歌", "free listening"),
         ("官方受限", "officially restricted"),
-        ("网易云", "NetEase Cloud Music"),
         ("QQ 音乐", "QQ Music"),
         ("QQ音乐", "QQ Music"),
         ("酷狗音乐", "Kugou Music"),

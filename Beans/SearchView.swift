@@ -39,18 +39,14 @@ struct FlowLayout: Layout {
 }
 
 enum SearchProvider: String, CaseIterable, Identifiable, Hashable {
-    case netease = "网易云音乐"
     case qq = "QQ音乐"
     case kugou = "酷狗音乐"
 
     var id: String { rawValue }
 
-    /// 主题色渐变：网易云红 / QQ 绿
+    /// 主题色渐变：QQ 绿 / 酷狗蓝
     var tint: LinearGradient {
         switch self {
-        case .netease: return LinearGradient(
-            colors: [Color(red: 0.93, green: 0.22, blue: 0.16), Color(red: 0.80, green: 0.15, blue: 0.12)],
-            startPoint: .topLeading, endPoint: .bottomTrailing)
         case .qq: return LinearGradient(
             colors: [Color(red: 0.15, green: 0.78, blue: 0.55), Color(red: 0.05, green: 0.58, blue: 0.42)],
             startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -62,7 +58,6 @@ enum SearchProvider: String, CaseIterable, Identifiable, Hashable {
 
     var icon: String {
         switch self {
-        case .netease: return "cloud.fill"
         case .qq: return "play.rectangle.fill"
         case .kugou: return "music.note"
         }
@@ -70,7 +65,6 @@ enum SearchProvider: String, CaseIterable, Identifiable, Hashable {
 
     var brandImageName: String? {
         switch self {
-        case .netease: return "BrandNetease"
         case .qq: return "BrandQQ"
         case .kugou: return "BrandKugou"
         }
@@ -88,14 +82,13 @@ enum SearchResultType: String, CaseIterable, Identifiable {
 struct SearchView: View {
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var player: PlayerManager
-    @EnvironmentObject private var auth: AuthStore
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("beans.uiStyle") private var uiStyleRaw = BeansUIStyle.liquid.rawValue
     @AppStorage(PlatformPreferenceStore.hidePickerKey) private var hidePlatformPicker = false
 
     @State private var keyword = ""
-    @AppStorage("beans.search.provider") private var providerRaw = SearchProvider.netease.rawValue
-    @State private var provider: SearchProvider = .netease
+    @AppStorage("beans.search.provider") private var providerRaw = SearchProvider.qq.rawValue
+    @State private var provider: SearchProvider = .qq
     @ObservedObject private var platformPrefs = PlatformPreferenceStore.shared
     private var searchProviders: [SearchProvider] { platformPrefs.enabledSearchProviders }
     /// 已加载热门搜索的 provider（避免切 tab 反复加载）
@@ -178,7 +171,7 @@ struct SearchView: View {
             Task { await startSearch(trimmed) }
         }
         .onAppear {
-            provider = platformPrefs.ensureVisible(SearchProvider(rawValue: providerRaw) ?? .netease)
+            provider = platformPrefs.ensureVisible(SearchProvider(rawValue: providerRaw) ?? .qq)
         }
         .onReceive(platformPrefs.changes) { _ in
             let next = platformPrefs.ensureVisible(provider)
@@ -437,7 +430,7 @@ struct SearchView: View {
                     historyStore.record(word)
                     Task { await startSearch(word) }
                 }
-                SectionHeader(title: provider == .netease ? "网易云音乐热搜" : provider == .qq ? "QQ音乐热搜" : "酷狗音乐热搜")
+                SectionHeader(title: provider == .qq ? "QQ音乐热搜" : "酷狗音乐热搜")
                 if hotWords.isEmpty {
                     LoadingStateView()
                 } else {
@@ -778,8 +771,6 @@ struct SearchView: View {
             }
         } else if provider == .kugou {
             hotWords = await KugouMusicAPI.shared.hotWords()
-        } else if let words = try? await NetEaseAPI.shared.hotSearch() {
-            hotWords = words
         }
     }
 
@@ -802,21 +793,6 @@ struct SearchView: View {
             }
             do {
                 switch (selectedProvider, selectedType) {
-                case (.netease, .song):
-                    let songs = try await NetEaseAPI.shared.search(keyword: trimmed, limit: 40)
-                    guard !Task.isCancelled else { return }
-                    await MainActor.run {
-                        songResults = songs
-                        if !songs.isEmpty { BeansHaptics.success() }
-                    }
-                case (.netease, .artist):
-                    let artists = try await NetEaseAPI.shared.searchArtists(keyword: trimmed)
-                    guard !Task.isCancelled else { return }
-                    await MainActor.run { artistResults = artists }
-                case (.netease, .album):
-                    let albums = try await NetEaseAPI.shared.searchAlbums(keyword: trimmed)
-                    guard !Task.isCancelled else { return }
-                    await MainActor.run { albumResults = albums }
                 case (.qq, .song):
                     let songs = try await QQMusicAPI.shared.searchSongs(keyword: trimmed)
                     guard !Task.isCancelled else { return }
@@ -951,21 +927,6 @@ struct AlbumDetailView: View {
         do {
             let result: [Song]
             switch album.source {
-            case .netease:
-                guard let id = Int(album.id.replacingOccurrences(of: "netease-", with: "")) else {
-                    throw NSError(domain: "BeansAlbum", code: 1, userInfo: [NSLocalizedDescriptionKey: "专辑 ID 无效"])
-                }
-                let direct = (try? await NetEaseAPI.shared.albumSongs(albumID: id)) ?? []
-                if !direct.isEmpty {
-                    result = direct
-                } else {
-                    result = await searchFallbackSongs(
-                        queries: [albumSearchQuery, album.name],
-                        search: { query in
-                            (try? await NetEaseAPI.shared.search(keyword: query, limit: 100)) ?? []
-                        }
-                    )
-                }
             case .qq:
                 result = await searchFallbackSongs(
                     queries: [albumSearchQuery, album.name],

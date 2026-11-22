@@ -6,7 +6,7 @@ This repository contains the public iOS client.
 
 ## Highlights
 
-- NetEase Cloud Music, QQ Music, and Kugou Music browsing and search
+- QQ Music and Kugou Music browsing and search
 - Account login, synced playlists, favorites, rankings, artists, albums, and recent plays
 - Playback queue, shuffle, repeat, playback speed, sleep timer, background playback, and lock-screen controls
 - Lyrics with translation, appearance controls, scrolling, and interactive seeking
@@ -26,7 +26,6 @@ Beans/
   ProfileView.swift           Account, appearance, backup, and settings
   PlayerView.swift            Full player and lyrics experience
   PlayerManager.swift         Queue, playback, history, and recovery
-  NetEaseAPI.swift            NetEase integration
   QQMusicAPI.swift            QQ Music integration
   KugouMusicAPI.swift         Kugou integration
   UnblockService.swift        User-configured source resolution

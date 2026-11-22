@@ -29,7 +29,6 @@ enum RootTab: String, CaseIterable, Identifiable {
 }
 struct RootView: View {
     @EnvironmentObject private var theme: ThemeStore
-    @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var favorites: FavoritesStore
     @Environment(\.colorScheme) private var colorScheme
@@ -42,7 +41,7 @@ struct RootView: View {
     @AppStorage("beans.disclaimerAccepted") private var disclaimerAccepted = false
     /// 底栏是否显示文字（关闭后只显示图标）
     @AppStorage("beans.tabLabelsVisible") private var tabLabelsVisible = true
-    @AppStorage("beans.homeSource") private var homeSourceRaw = SearchProvider.netease.rawValue
+    @AppStorage("beans.homeSource") private var homeSourceRaw = SearchProvider.qq.rawValue
     /// 强制高刷新率：用于修复部分页面被系统稳定在 60Hz 的问题。
     @AppStorage("beans.enableHighRefresh") private var enableHighRefresh = true
     @AppStorage("beans.legacyTabCornerRadius") private var legacyTabCornerRadius = 32.0
@@ -331,7 +330,7 @@ struct RootView: View {
 
     @ViewBuilder
     private var platformSelectionMenu: some View {
-        let current = SearchProvider(rawValue: homeSourceRaw) ?? platformPrefs.enabledSearchProviders.first ?? .netease
+        let current = SearchProvider(rawValue: homeSourceRaw) ?? platformPrefs.enabledSearchProviders.first ?? .qq
         Text("主页平台")
         ForEach(platformPrefs.enabledSearchProviders) { provider in
             Button {

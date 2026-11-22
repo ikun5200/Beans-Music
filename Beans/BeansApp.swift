@@ -4,7 +4,6 @@ import UIKit
 @main
 struct BeansApp: App {
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var auth = AuthStore()
     @StateObject private var player = PlayerManager()
     @StateObject private var theme = ThemeStore.shared
     @StateObject private var favorites = FavoritesStore.shared
@@ -39,7 +38,6 @@ struct BeansApp: App {
         WindowGroup {
             ZStack {
                 RootView()
-                    .environmentObject(auth)
                     .environmentObject(player)
                     .environmentObject(theme)
                     .environmentObject(favorites)

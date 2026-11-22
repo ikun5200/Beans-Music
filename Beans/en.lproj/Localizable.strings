@@ -8,7 +8,6 @@
 "· 音乐版权归各网站所有，本站不承担任何法律责任和连带责任。" = "· Music copyrights belong to their respective platforms. Beans Music assumes no related legal liability.";
 "· Beans Music 只用作个人学习研究，禁止用于商业及非法用途，如产生法律纠纷与本人无关。" = "· Beans Music is for personal learning and research only. Commercial or illegal use is prohibited.";
 "“酷狗音乐”及其名称、图形和商业标识归酷狗音乐及相关权利方所有。酷狗音乐享有对其平台授权音乐的版权，请勿随意下载、复制版权内容。具体内容请参考酷狗音乐用户协议。" = "Kugou Music, its name, graphics, and commercial marks belong to Kugou Music and its respective rights holders. Please follow the Kugou Music user agreement.";
-"“网易云”、“网易云音乐”等文字、图形和商业标识，其著作权或商标权归网易所有。网易云音乐享有对其平台授权音乐的版权，请勿随意下载、复制版权内容。具体内容请参考网易云音乐用户协议。" = "NetEase Cloud Music names, graphics, and commercial marks belong to NetEase. Please follow the NetEase Cloud Music user agreement.";
 "“QQ”、“QQ音乐”及企鹅形象等文字、图形和商业标识，其著作权或商标权归腾讯公司所有。QQ音乐享有对其平台授权音乐的版权，请勿随意下载、复制版权内容。具体内容请参考QQ音乐用户协议。" = "QQ, QQ Music, the penguin image, and related marks belong to Tencent. Please follow the QQ Music user agreement.";
 ") 壁纸=\\(includeWallpapers ? " = ") =\\(includeWallpapers ?";
 ") 第三方=\\(resolved != nil ? " = ") =\\(resolved != nil ?";
@@ -50,7 +49,6 @@
 "▶ 播放成功确认：\\(song.name)｜URL=\\(self.playbackURLSummary(url))｜第三方=\\(isThirdParty ? " = "Log message \(song.name) \(self.playbackURLSummary(url)";
 "▶ 开始播放：\\(song.name) - \\(song.artists)｜平台=\\(song.source.rawValue) id=\\(song.id) 音质=\\(quality.level) 免费听歌=\\(enableUnblock ? " = "▶ Start playback: \\(song.name) - \\(song.artists) | Platform=\\(song.source.rawValue) id=\\(song.id) Quality=\\(quality.level) Free listening=\\(enableUnblock ?";
 "⚠ 检测到上次运行异常退出（疑似闪退）。崩溃详情见 crash-*.log，可导出反馈排查" = "Abnormal exit detected from the last run. Crash details are saved in crash-*.log and can be exported for troubleshooting.";
-"✓ 网易云登录成功，正在同步…" = "✓ NetEase Cloud sign-in successful. Syncing…";
 "✓ QQ 音乐登录成功" = "✓ QQ Music sign-in successful";
 "120Hz 高刷新" = "120Hz High Refresh Rate";
 "3D 倾斜" = "3D";
@@ -143,7 +141,6 @@
 "单曲循环" = "Repeat One";
 "当前：默认背景" = "Current: Default Background";
 "当前：已应用壁纸" = "Current: Wallpaper applied";
-"当前播放歌词下方显示译文（网易云 tlyric）" = "Show translated lyrics below the current line (NetEase tlyric)";
 "当前定时" = "Current Timer";
 "当前歌曲播放失败，已自动切到下一首" = "The current song failed, so playback skipped to the next song.";
 "当前歌曲解析失败或播放地址失效时，自动跳到下一首" = "Automatically skip to the next song when parsing fails or the playback URL expires.";
@@ -173,8 +170,6 @@
 "登录酷狗音乐" = "Sign in to Kugou Music";
 "登录酷狗音乐后即可同步云端歌单" = "Sign in to Kugou Music to sync cloud playlists.";
 "登录同步云端歌单，并支持酷狗歌曲搜索" = "Log in to sync cloud playlists and search Kugou songs";
-"登录网易云音乐，同步你的歌单" = "Sign in to NetEase Cloud Music to sync your playlists.";
-"登录网易云音乐后即可查看你的歌单" = "Sign in to NetEase Cloud Music to view your playlists.";
 "等待开始播放…" = "Waiting to play…";
 "低系统悬浮底栏" = "Legacy Floating Tab Bar";
 "低质量（128kbps）" = "Low Quality (128 kbps)";
@@ -362,7 +357,6 @@
 "渐变预设" = "Gradient";
 "交流群" = "Community Group";
 "较高" = "High";
-"接入网易云音乐、QQ 音乐等公开接口" = "Connects to public APIs for NetEase Cloud Music, QQ Music, and more.";
 "接下来 (\\(player.queue.count) 首)" = "(\\(player.queue.count) )";
 "解析播放地址失败" = "Failed to Resolve Playback URL";
 "今日推荐" = "Recommendations";
@@ -398,7 +392,6 @@
 "酷狗兜底：\\(song.name) 第三方=未命中" = "Log entry";
 "酷狗兜底：\\(song.name) 酷狗音源=命中" = "Log entry";
 "酷狗兜底跳过：缺少 album_audio_id/hash" = "Kugou fallback skipped: missing album_audio_id/hash";
-"酷狗兜底转网易云音源：\\(song.name) -> \\(matched.name) 第三方=\\(resolved != nil ? " = "Log entry";
 "酷狗二维码生成失败" = "Failed";
 "酷狗高音质地址无法打开，自动回退标准音质：歌曲=\\(song.name) 系统=\\(UIDevice.current.systemVersion) 错误=\\(error?.localizedDescription ?? " = "Log entry";
 "酷狗歌单" = "Playlist";
@@ -484,7 +477,6 @@
 "请求地址无效" = "Please";
 "请使用酷狗音乐 App 扫码" = "App";
 "请使用酷狗音乐 App 扫码。登录成功后会保存移动端 token、设备 mid 和 dfid，用于同步云端歌单。" = "Log message";
-"请使用网易云音乐 App 扫码" = "App";
 "请使用微信扫描上方二维码完成赞助。" = "Scan the QR code above with WeChat to sponsor.";
 "请输入：\\(confirmText)" = "Log entry";
 "请输入歌单名称" = "Enter a playlist name";
@@ -523,7 +515,6 @@
 "三平台聚合，一个 App 全听遍" = "Three platforms, one app for all your music";
 "三平台同步：酷狗歌单 \\(lists.map(\\.name).joined(separator: " = "Log message \(lists.map(\\.name)";
 "三平台同步：酷狗音乐失败 \\(error.localizedDescription)" = "Log message \(error.localizedDescription)";
-"三平台同步：网易云失败 \\(error.localizedDescription)" = "Log message \(error.localizedDescription)";
 "三平台同步：QQ音乐失败 \\(error.localizedDescription)" = "Log message \(error.localizedDescription)";
 "三平台喜欢" = "Three-platform Likes";
 "扫码 / 网页 / Cookie 登录，同步歌单与 VIP" = "Scan, web, or Cookie login to sync playlists and VIP status";
@@ -555,9 +546,7 @@
 "收起播放器" = "Player";
 "收起歌单广场" = "Playlist";
 "手动输入" = "Enter";
-"首页和搜索保留网易云 / QQ 音乐入口；音乐库可同步网易云、QQ 音乐与酷狗云端歌单。" = "Home and Search keep NetEase Cloud and QQ Music entries. Music Library can sync NetEase Cloud, QQ Music, and Kugou cloud playlists.";
 "输入歌单名称，创建后同步到\\(source.rawValue)" = "Log message \(source.rawValue)";
-"输入歌名后会同时搜索网易云、QQ音乐和酷狗音乐" = "Enter a song name to search NetEase Cloud Music, QQ Music, and Kugou Music together.";
 "输入歌名搜索" = "Search by song name";
 "输入歌名搜索，点击结果加入本地歌单" = "Search by song name, then tap a result to add it to the local playlist.";
 "输入后才会启用第三方音源。密钥只保存在本机，不会上传到 Beans 服务器。" = "Third-party sources are enabled only after a key is entered. Keys are stored locally and never uploaded to the Beans server.";
@@ -608,36 +597,17 @@
 "退出登录" = "Log Out";
 "退出多选" = "Exit";
 "退出酷狗音乐？" = "Sign out of Kugou Music?";
-"退出网易云登录？" = "Sign out of NetEase Cloud?";
 "外观" = "Appearance";
 "完成" = "Done";
 "晚上好" = "Good evening";
 "网络连接失败，请检查网络" = "Network connection failed. Please check your network.";
 "网页登录" = "Web Login";
-"网易云" = "NetEase Cloud";
-"网易云 / QQ音乐 / 酷狗音乐 第三方客户端 · 仅供学习研究" = "Third-party client for NetEase Cloud Music, QQ Music, and Kugou Music · For study and research only";
-"网易云 \\(neteaseSongs.count) 首" = "\\(neteaseSongs.count)";
-"网易云 + QQ 音乐 + 酷狗歌单同步" = "Sync playlists from NetEase Cloud, QQ Music, and Kugou";
-"网易云登录成功" = "NetEase CloudSign insuccess";
-"网易云红心同步失败：id=\\(id) liked=\\(liked) code=\\(lastCode) \\(lastError)" = "Log message \(id) \(liked) \(lastCode) \(lastError)";
-"网易云缓存补充 \\(cached.count) 首" = "\\(cached.count)";
-"网易云结果：\\(song.name) 官方=\\(urlString != nil ? " = "NetEase Cloudresult: \\(song.name) Official=\\(urlString != nil ?";
-"网易云解析：\\(song.name) 音质=\\(quality.level) 官方URL=\\(info?.url == nil ? " = "Log message \(song.name) \(quality.level)";
-"网易云请求失败" = "NetEase CloudPleaseFailed";
-"网易云未登录" = "NetEase Cloud Music is not signed in";
-"网易云未找到喜欢歌单" = "NetEase CloudNotLikedPlaylist";
-"网易云音乐" = "NetEase Cloud Music";
-"网易云音乐 \\(nick)" = "NetEase Cloud Music \\(nick)";
-"网易云音乐 UID \\(auth.user?.uid ?? 0)" = "NetEase Cloud Music UID \\(auth.user?.uid ?? 0)";
-"网易云音乐歌单" = "NetEase Cloud Musicplaylist";
-"网易云音乐已登录" = "NetEase Cloud Music Logged In";
 "未播放行颜色" = "Inactive Line Color";
 "未登录 · 扫码登录同步歌单" = "Not signed in · Scan to sync playlists";
 "未登录 · 网页 / 扫码 / Cookie 登录" = "Not signed in · Web / QR / Cookie login";
 "未登录 · App 扫码同步歌单" = "Not signed in · Scan in the app to sync playlists";
 "未读取到 QQ/微信账号标识，请确认网页登录已经完成" = "No QQ/WeChat account ID was found. Make sure web sign-in is complete.";
 "未返回" = "No Response";
-"未检测到有效登录态，请先在网页中完成网易云登录" = "No valid sign-in state detected. Please finish NetEase Cloud web sign-in first.";
 "未命名歌单" = "Unnamed Playlist";
 "未命名音源" = "Not";
 "未设置" = "Not Set";
@@ -703,7 +673,6 @@
 "新建歌单并加入" = "Create Playlist and Add";
 "新增 QQ 音乐热门歌单展示" = "Added QQ Music hot playlist section";
 "新增功能" = "New Features";
-"新增网易云音乐、QQ音乐、酷狗音乐歌单一键同步到本地" = "Added one-tap playlist sync from NetEase Cloud Music, QQ Music, and Kugou Music to local playlists.";
 "星蓝" = "Star Blue";
 "修复 iOS 15 编译兼容问题" = "iOS 15";
 "修复 QQ 音乐喜欢列表不显示的问题" = "Fixed QQ Music liked list not appearing";
@@ -753,7 +722,6 @@
 "已同步 \\(unique.count) 首，新增 \\(added) 首到本地歌单“\\(playlistName)”" = "Log message \(unique.count) \(added) \(playlistName)";
 "已退出 QQ 音乐" = "Signed out of QQ Music";
 "已退出酷狗音乐" = "Signed out of Kugou Music";
-"已退出网易云账号" = "Signed out of NetEase Cloud account";
 "已显示" = "Shown";
 "已选歌曲会复制到目标歌单，当前歌单中的歌曲不会被移除。" = "Selected songs will be copied to the target playlist and will not be removed from the current playlist.";
 "已移除 \\(count) 首歌曲" = "\\(count)";
@@ -795,7 +763,6 @@
 "粤语" = "Cantonese";
 "运动" = "Workout";
 "在下方网页右上角点「登录」，完成后手动点击下方「同步登录状态」" = "Tap \'Log In\' in the top-right of the web page below, then manually tap \'Sync Login Status\'.";
-"在下方网页中完成网易云登录，完成后手动点击下方「同步登录状态」" = "Complete NetEase Cloud sign-in in the web page below, then manually tap \'Sync Login Status\'.";
 "暂未同步到酷狗歌单，下拉刷新试试" = "No Kugou playlists synced yet. Pull down to refresh.";
 "暂未找到相关歌曲" = "No matching songs found";
 "暂无 QQ 歌单" = "No QQ Music playlists yet";
@@ -828,7 +795,6 @@
 "正在播放" = "Now Playing";
 "正在读取登录状态…" = "Reading login status…";
 "正在加载 QQ 音乐…" = "Loading QQ Music…";
-"正在加载网易云音乐…" = "Loading NetEase Cloud Music…";
 "正在检查…" = "Checking…";
 "正在连接下载服务器…" = "Connecting to download server…";
 "正在生成二维码…" = "Generating QR code…";
@@ -925,11 +891,9 @@
 "Beans Music · 仅供学习交流，纯 AI 实现此应用" = "Beans Music - for learning and communication only. Built with AI.";
 "Beans Music 公告" = "Beans Music Announcement";
 "Beans Music 启动（版本 \\(Self.appVersion)）" = "Beans Music started (version \\(Self.appVersion))";
-"Beans Music 是一款聚合网易云音乐、QQ 音乐与酷狗音乐歌单同步能力的第三方音乐播放器客户端，仅供个人学习研究使用。" = "Beans Music is a third-party music player for syncing NetEase Cloud Music, QQ Music, and Kugou playlists. For personal learning only.";
 "Beans设置备份-\\(Self.backupDateString())" = "Beans-\\(Self.backupDateString())";
 "Cookie 格式或登录态无效，请确认已完整复制" = "Cookie format or sign-in state is invalid. Make sure the full Cookie was copied.";
 "DJ 节奏脉冲光效" = "DJ Beat Pulse";
-"iOS 26 原生液态玻璃 · 聚合网易云 / QQ / 酷狗\\n纯 SwiftUI · 完全开源" = "iOS 26 · / QQ / \\n SwiftUI ·";
 "QQ 登录接口异常，请重试" = "Log message";
 "QQ 峰尖榜" = "QQ Peak Chart";
 "QQ 歌单歌曲加载开始 listID=\\(listID) limit=\\(limit > 0 ? String(limit) : " = "QQ listID=\\(listID) limit=\\(limit > 0 ? String(limit) :";
@@ -999,13 +963,9 @@
 "X / Y / 大小和 Apple Music 外观会立即同步到当前播放页" = "X / Y / Apple Music";
 "X 位置" = "X";
 "Y 位置" = "Y";
-"网易云音乐热搜" = "NetEase Cloud Music Hot Searches";
 "QQ音乐热搜" = "QQ Music Hot Searches";
 "酷狗音乐热搜" = "Kugou Music Hot Searches";
 "热门搜索" = "Hot Searches";
-"网易云音乐 / QQ音乐 / 酷狗音乐" = "NetEase Cloud Music / QQ Music / Kugou Music";
-"网易云音乐 / QQ音乐" = "NetEase Cloud Music / QQ Music";
-"网易云音乐 / 酷狗音乐" = "NetEase Cloud Music / Kugou Music";
 "QQ音乐 / 酷狗音乐" = "QQ Music / Kugou Music";
 
 
@@ -1027,7 +987,6 @@
 "%d 分钟后关闭" = "Turn off after %d minutes";
 "%d 分钟" = "%d minutes";
 "%@ %d 首" = "%@ %d songs";
-"网易云缓存补充 %d 首" = "NetEase Cloud cache added %d songs";
 "；合计 %d 首" = "; total %d songs";
 "，" = ", ";
 "已同步 %d 首，新增 %d 首到本地歌单“%@”" = "Synced %d songs and added %d new songs to local playlist %@";
@@ -1044,7 +1003,6 @@
 "从喜欢的歌开始漫游" = "Roam from songs you love";
 "心动模式" = "Heartbeat Mode";
 "你的红心歌曲和相似推荐" = "Your liked songs and similar picks";
-"请先登录网易云音乐" = "Please sign in to NetEase Cloud Music";
 "私人漫游暂时没有推荐" = "Personal FM has no recommendations right now";
 "已开启私人漫游" = "Personal FM started";
 "私人漫游加载失败" = "Failed to load Personal FM";

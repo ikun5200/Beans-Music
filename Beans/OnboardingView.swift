@@ -186,7 +186,7 @@ struct OnboardingView: View {
                 .font(BeansFont.appFont(30, .bold))
                 .foregroundStyle(Color.beansLabel)
 
-            Text(isEnglish ? "Native Liquid Glass on iOS 26 · NetEase Cloud Music / QQ Music / Kugou\nPure SwiftUI · Fully open source" : "iOS 26 原生液态玻璃 · 聚合网易云 / QQ / 酷狗\n纯 SwiftUI · 完全开源")
+            Text(isEnglish ? "Native Liquid Glass on iOS 26 · QQ Music / Kugou\nPure SwiftUI · Fully open source" : "iOS 26 原生液态玻璃 · 聚合 QQ / 酷狗\n纯 SwiftUI · 完全开源")
                 .font(BeansFont.appFont(15))
                 .foregroundStyle(Color.beansSecondary)
                 .multilineTextAlignment(.center)
@@ -279,18 +279,15 @@ struct OnboardingView: View {
                 .font(.system(size: 40))
                 .foregroundStyle(LinearGradient.beansAccent)
 
-            Text(isEnglish ? "Three platforms, one app for all your music" : "三平台聚合，一个 App 全听遍")
+            Text(isEnglish ? "Two platforms, one app for all your music" : "双平台聚合，一个 App 全听遍")
                 .font(BeansFont.appFont(26, .bold))
                 .foregroundStyle(Color.beansLabel)
 
-            Text(isEnglish ? "Sync playlists from NetEase Cloud Music, QQ Music, and Kugou" : "网易云 + QQ 音乐 + 酷狗歌单同步")
+            Text(isEnglish ? "Sync playlists from QQ Music, and Kugou" : "QQ 音乐 + 酷狗歌单同步")
                 .font(BeansFont.appFont(14))
                 .foregroundStyle(Color.beansSecondary)
 
             VStack(spacing: 12) {
-                platformRow(imageName: "BrandNetease", tint: Color(red: 0.87, green: 0.23, blue: 0.23),
-                            title: isEnglish ? "NetEase Cloud Music" : "网易云音乐",
-                            detail: isEnglish ? "Scan or sign in on the web to sync playlists, favorites, charts, and VIP status" : "扫码 / 网页登录，同步歌单、收藏、听歌排行、VIP")
                 platformRow(imageName: "BrandQQ", tint: Color(red: 0.13, green: 0.51, blue: 0.95),
                             title: isEnglish ? "QQ Music" : "QQ 音乐",
                             detail: isEnglish ? "Scan, sign in on the web, or use a Cookie to sync playlists and VIP status" : "扫码 / 网页 / Cookie 登录，同步歌单与 VIP")
